@@ -1,0 +1,223 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "01ac4e73b2b8c84699c47939305ae3d9",
+    "entities": [
+      {
+        "tableName": "flight_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `createdAtEpochMs` INTEGER NOT NULL, `dep` TEXT NOT NULL, `arr` TEXT NOT NULL, `depRwy` TEXT NOT NULL, `depGate` TEXT NOT NULL, `sid` TEXT NOT NULL, `cruiseFl` TEXT NOT NULL, `depFlaps` TEXT NOT NULL, `v2` TEXT NOT NULL, `route` TEXT NOT NULL, `arrRwy` TEXT NOT NULL, `arrGate` TEXT NOT NULL, `star` TEXT NOT NULL, `altn` TEXT NOT NULL, `qnh` TEXT NOT NULL, `vref` TEXT NOT NULL, `flightNumber` TEXT NOT NULL, `aircraft` TEXT NOT NULL, `fuel` TEXT NOT NULL, `pax` TEXT NOT NULL, `payload` TEXT NOT NULL, `airTime` TEXT NOT NULL, `blockTime` TEXT NOT NULL, `costIndex` TEXT NOT NULL, `reserveFuel` TEXT NOT NULL, `zfw` TEXT NOT NULL, `crzWind` TEXT NOT NULL, `crzOat` TEXT NOT NULL, `info` TEXT NOT NULL, `initAlt` TEXT NOT NULL, `squawk` TEXT NOT NULL, `scratchpad` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMs",
+            "columnName": "createdAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dep",
+            "columnName": "dep",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "arr",
+            "columnName": "arr",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "depRwy",
+            "columnName": "depRwy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "depGate",
+            "columnName": "depGate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sid",
+            "columnName": "sid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cruiseFl",
+            "columnName": "cruiseFl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "depFlaps",
+            "columnName": "depFlaps",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "v2",
+            "columnName": "v2",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "route",
+            "columnName": "route",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "arrRwy",
+            "columnName": "arrRwy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "arrGate",
+            "columnName": "arrGate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "star",
+            "columnName": "star",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "altn",
+            "columnName": "altn",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "qnh",
+            "columnName": "qnh",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vref",
+            "columnName": "vref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flightNumber",
+            "columnName": "flightNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aircraft",
+            "columnName": "aircraft",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fuel",
+            "columnName": "fuel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pax",
+            "columnName": "pax",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payload",
+            "columnName": "payload",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "airTime",
+            "columnName": "airTime",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "blockTime",
+            "columnName": "blockTime",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "costIndex",
+            "columnName": "costIndex",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reserveFuel",
+            "columnName": "reserveFuel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zfw",
+            "columnName": "zfw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "crzWind",
+            "columnName": "crzWind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "crzOat",
+            "columnName": "crzOat",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "info",
+            "columnName": "info",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "initAlt",
+            "columnName": "initAlt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "squawk",
+            "columnName": "squawk",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scratchpad",
+            "columnName": "scratchpad",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '01ac4e73b2b8c84699c47939305ae3d9')"
+    ]
+  }
+}
