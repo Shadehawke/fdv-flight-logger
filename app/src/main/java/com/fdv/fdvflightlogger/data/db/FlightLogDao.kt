@@ -17,4 +17,7 @@ interface FlightLogDao {
 
     @Query("SELECT * FROM flight_logs ORDER BY createdAtEpochMs DESC LIMIT 1")
     suspend fun latest(): FlightLogEntity?
+
+    @Query("SELECT * FROM flight_logs ORDER BY createdAtEpochMs DESC")
+    suspend fun getAll(): List<FlightLogEntity>
 }

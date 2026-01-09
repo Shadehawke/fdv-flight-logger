@@ -27,5 +27,5 @@ class FlightLogRepository(context: Context) {
         return dao.insert(entity)
     }
 
-    suspend fun latest(): FlightLogEntity? = dao.latest()
+    suspend fun getAll(): List<FlightLogEntity> = dao.getAll()
 }

@@ -1,17 +1,25 @@
 package com.fdv.fdvflightlogger.ui
 
 import android.app.Application
+import android.content.Context
+import android.net.Uri
+
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+
 import com.fdv.fdvflightlogger.data.prefs.AppSettings
 import com.fdv.fdvflightlogger.data.prefs.PilotProfile
 import com.fdv.fdvflightlogger.data.prefs.UserPrefsRepository
+
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+import com.fdv.fdvflightlogger.export.ExportCsv
 import com.fdv.fdvflightlogger.data.db.FlightLogRepository
 import com.fdv.fdvflightlogger.ui.screens.FlightDraft
 
@@ -63,10 +71,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             repo.saveSettings(settings)
         }
     }
-
-    fun setLastLanded(airport: String) {
+    fun exportAllFlightsToCsv(context: Context, uri: Uri) {
         viewModelScope.launch {
-            repo.setLastLanded(airport)
+            val flights = flightRepo.getAll()
+            val csv = ExportCsv.buildCsv(flights)
+
+            withContext(Dispatchers.IO) {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(csv.toByteArray(Charsets.UTF_8))
+                } ?: error("Unable to open output stream for URI")
+            }
         }
     }
 }
