@@ -1,5 +1,6 @@
 package com.fdv.fdvflightlogger.ui.screens
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -21,9 +22,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.UiEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +71,43 @@ fun FlightHistoryScreen(
         }
     )
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        appViewModel.events.collect { event ->
+            when (event) {
+                is UiEvent.ExportSuccess -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Exported ${event.fileName}",
+                        actionLabel = "Share",
+                        duration = SnackbarDuration.Long
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        val share = Intent(Intent.ACTION_SEND).apply {
+                            type = event.mimeType
+                            putExtra(Intent.EXTRA_STREAM, event.uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(
+                            Intent.createChooser(share, "Share ${event.fileName}")
+                        )
+                    }
+                }
+
+                is UiEvent.ExportError -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
+        }
+    }
+
+
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Flight History") },
