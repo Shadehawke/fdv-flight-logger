@@ -55,6 +55,15 @@ fun FlightHistoryScreen(
         }
     )
 
+    val createPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf"),
+        onResult = { uri ->
+            if (uri != null) {
+                appViewModel.exportAllFlightsToPdf(context, uri)
+            }
+        }
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -81,6 +90,14 @@ fun FlightHistoryScreen(
                             onClick = {
                                 menuOpen.value = false
                                 createCsvLauncher.launch("fdv_flights.csv")
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Export PDF") },
+                            onClick = {
+                                menuOpen.value = false
+                                createPdfLauncher.launch("fdv_flights.pdf")
                             }
                         )
                     }

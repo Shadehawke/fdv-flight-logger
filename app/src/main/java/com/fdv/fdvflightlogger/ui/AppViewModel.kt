@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import com.fdv.fdvflightlogger.export.ExportCsv
+import com.fdv.fdvflightlogger.export.ExportPdf
 import com.fdv.fdvflightlogger.data.db.FlightLogRepository
 import com.fdv.fdvflightlogger.ui.screens.FlightDraft
 
@@ -80,6 +81,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 context.contentResolver.openOutputStream(uri)?.use { out ->
                     out.write(csv.toByteArray(Charsets.UTF_8))
                 } ?: error("Unable to open output stream for URI")
+            }
+        }
+    }
+
+    fun exportAllFlightsToPdf(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            val flights = flightRepo.getAll()
+
+            val header = ExportPdf.HeaderInfo(
+                pilotId = state.value.profile.pilotId,
+                pilotName = state.value.profile.name,
+                hub = state.value.profile.hub
+            )
+
+            val pdf = ExportPdf.buildPdf(flights, header)
+
+            withContext(Dispatchers.IO) {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    pdf.writeTo(out)
+                } ?: error("Unable to open output stream for URI")
+                pdf.close()
             }
         }
     }
