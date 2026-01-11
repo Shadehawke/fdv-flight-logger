@@ -68,7 +68,7 @@ fun FlightHistoryScreen(
 
     // Search + sort are UI state, and should survive rotation/process recreation when possible
     var query by rememberSaveable { mutableStateOf("") }
-    var sortMode by rememberSaveable { mutableStateOf(SortMode.NEWEST_FIRST) }
+    val sortMode = rememberSaveable { mutableStateOf(SortMode.NEWEST_FIRST) }
 
     val createCsvLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv"),
@@ -120,12 +120,11 @@ fun FlightHistoryScreen(
     val filteredFlights = flights
         .asSequence()
         .filter { f ->
-            if (normalizedQuery.isBlank()) return@filter true
-            f.matches(normalizedQuery)
+            if (normalizedQuery.isBlank()) true else f.matches(normalizedQuery)
         }
         .toList()
         .let { list ->
-            when (sortMode) {
+            when (sortMode.value) {
                 SortMode.NEWEST_FIRST -> list.sortedByDescending { it.createdAtEpochMs }
                 SortMode.OLDEST_FIRST -> list.sortedBy { it.createdAtEpochMs }
             }
@@ -147,7 +146,7 @@ fun FlightHistoryScreen(
                 actions = {
                     // Sort toggle (simple, obvious, one tap)
                     IconButton(onClick = {
-                        sortMode = when (sortMode) {
+                        sortMode.value = when (sortMode.value) {
                             SortMode.NEWEST_FIRST -> SortMode.OLDEST_FIRST
                             SortMode.OLDEST_FIRST -> SortMode.NEWEST_FIRST
                         }
@@ -207,7 +206,7 @@ fun FlightHistoryScreen(
             )
 
             // Tiny status line so users understand what they’re seeing
-            val sortLabel = when (sortMode) {
+            val sortLabel = when (sortMode.value) {
                 SortMode.NEWEST_FIRST -> "Newest first"
                 SortMode.OLDEST_FIRST -> "Oldest first"
             }
