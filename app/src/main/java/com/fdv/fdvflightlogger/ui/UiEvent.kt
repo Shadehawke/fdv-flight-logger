@@ -12,4 +12,7 @@ sealed interface UiEvent {
     data class ExportError(
         val message: String
     ) : UiEvent
+
+    data class Message(val text: String) : UiEvent
+
 }

@@ -110,6 +110,9 @@ fun FlightHistoryScreen(
                         duration = SnackbarDuration.Long
                     )
                 }
+                is UiEvent.Message -> {
+                    snackbarHostState.showSnackbar(event.text, duration = SnackbarDuration.Short)
+                }
             }
         }
     }

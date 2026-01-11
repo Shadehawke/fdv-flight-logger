@@ -129,4 +129,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun getFlightById(id: Long): FlightLogEntity? {
         return flightRepo.getById(id)
     }
+
+    fun deleteFlight(flight: FlightLogEntity) {
+        viewModelScope.launch {
+            try {
+                flightRepo.delete(flight)
+                _events.tryEmit(UiEvent.Message("Flight deleted"))
+            } catch (t: Throwable) {
+                _events.tryEmit(UiEvent.Message("Delete failed: ..."))
+            }
+        }
+    }
 }
