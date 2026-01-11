@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.screens.FlightDetailScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightLogScreen
 import com.fdv.fdvflightlogger.ui.screens.SetupScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightHistoryScreen
@@ -40,6 +41,15 @@ fun AppNavHost(
 
         composable(Routes.HISTORY) {
             FlightHistoryScreen(appViewModel = appViewModel, navController = navController)
+        }
+
+        composable("detail/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id")?.toLongOrNull() ?: -1L
+            FlightDetailScreen(
+                appViewModel = appViewModel,
+                navController = navController,
+                flightId = id
+            )
         }
     }
 }

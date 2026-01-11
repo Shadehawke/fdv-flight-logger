@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightLogRepository
 import com.fdv.fdvflightlogger.data.prefs.AppSettings
 import com.fdv.fdvflightlogger.data.prefs.PilotProfile
@@ -123,5 +124,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _events.tryEmit(UiEvent.ExportError("PDF export failed: ${t.message ?: "Unknown error"}"))
             }
         }
+    }
+
+    suspend fun getFlightById(id: Long): FlightLogEntity? {
+        return flightRepo.getById(id)
     }
 }

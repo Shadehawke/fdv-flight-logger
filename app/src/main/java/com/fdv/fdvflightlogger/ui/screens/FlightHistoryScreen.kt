@@ -3,9 +3,11 @@ package com.fdv.fdvflightlogger.ui.screens
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -104,8 +106,6 @@ fun FlightHistoryScreen(
         }
     }
 
-
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -156,25 +156,43 @@ fun FlightHistoryScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(flights) { f ->
-                FlightHistoryCard(f)
+                FlightHistoryCard(
+                    f = f,
+                    onClick = { navController.navigate("detail/${f.id}") }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun FlightHistoryCard(f: FlightLogEntity) {
+private fun FlightHistoryCard(
+    f: FlightLogEntity,
+    onClick: () -> Unit
+) {
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = "${f.dep} → ${f.arr}",
-                style = MaterialTheme.typography.titleMedium
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${f.dep} → ${f.arr}",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Open",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             if (f.flightNumber.isNotBlank()) {
                 Text(
@@ -205,5 +223,3 @@ private fun FlightHistoryCard(f: FlightLogEntity) {
         }
     }
 }
-
-

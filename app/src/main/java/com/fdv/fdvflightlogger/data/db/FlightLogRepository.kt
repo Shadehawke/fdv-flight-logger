@@ -28,4 +28,6 @@ class FlightLogRepository(context: Context) {
     }
 
     suspend fun getAll(): List<FlightLogEntity> = dao.getAll()
+
+    suspend fun getById(id: Long): FlightLogEntity? = dao.getById(id)
 }
