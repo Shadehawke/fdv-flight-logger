@@ -66,6 +66,13 @@ class UserPrefsRepository(private val context: Context) {
         }
     }
 
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.THEME_MODE] = mode.name
+        }
+    }
+
+
     suspend fun setLastLanded(airport: String) {
         context.dataStore.edit { prefs ->
             prefs[Keys.LAST_LANDED] = airport.trim().uppercase()

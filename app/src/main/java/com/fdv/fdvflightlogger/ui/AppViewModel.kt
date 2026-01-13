@@ -9,6 +9,7 @@ import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightLogRepository
 import com.fdv.fdvflightlogger.data.prefs.AppSettings
 import com.fdv.fdvflightlogger.data.prefs.PilotProfile
+import com.fdv.fdvflightlogger.data.prefs.ThemeMode
 import com.fdv.fdvflightlogger.data.prefs.UserPrefsRepository
 import com.fdv.fdvflightlogger.export.ExportCsv
 import com.fdv.fdvflightlogger.export.ExportPdf
@@ -85,9 +86,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
     fun observeFlights() = flightRepo.observeAll()
-
 
     fun saveSetup(profile: PilotProfile, settings: AppSettings) {
         viewModelScope.launch {
@@ -95,6 +94,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             repo.saveSettings(settings)
         }
     }
+
+    @Suppress("unused")
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            repo.setThemeMode(mode)
+        }
+    }
+
+    @Suppress("unused")
+    fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        viewModelScope.launch {
+            val current = state.value.settings
+            repo.saveSettings(transform(current))
+        }
+    }
+
     fun exportAllFlightsToCsv(context: Context, uri: Uri) {
         viewModelScope.launch {
             try {

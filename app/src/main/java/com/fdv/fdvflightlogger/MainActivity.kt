@@ -20,7 +20,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val state = appViewModel.state.collectAsStateWithLifecycle().value
 
-            FDVFlightLoggerTheme {
+            FDVFlightLoggerTheme(
+                themeMode = state.settings.themeMode
+            ) {
                 val startDestination = if (state.isSetupComplete) {
                     Routes.FLIGHT_LOG
                 } else {
@@ -34,4 +36,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
+    }

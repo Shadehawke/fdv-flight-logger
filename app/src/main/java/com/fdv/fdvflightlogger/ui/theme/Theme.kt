@@ -1,6 +1,5 @@
 package com.fdv.fdvflightlogger.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +9,8 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import com.fdv.fdvflightlogger.data.prefs.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -33,21 +34,73 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+// --- FDV Brand Schemes (Delta palette) ---
+
+private val FdvLightColorScheme = lightColorScheme(
+    primary = DeltaBlue,
+    onPrimary = Color.White,
+    secondary = DeltaRed,
+    onSecondary = Color.White,
+
+    // Use tertiary sparingly in UI (chips/icons, not large surfaces)
+    tertiary = DeltaOrange,
+    onTertiary = Color.Black,
+
+    background = Color.White,
+    onBackground = DeltaDarkBlue,
+    surface = Color.White,
+    onSurface = DeltaDarkBlue,
+    surfaceVariant = Color(0xFFF2F4F7),
+    onSurfaceVariant = DeltaDarkBlue,
+    outline = Color(0xFFCBD5E1)
+)
+
+private val FdvDarkColorScheme = darkColorScheme(
+    // Better contrast on dark surfaces than pure DeltaBlue
+    primary = DeltaLightBlue,
+    onPrimary = Color.Black,
+    secondary = DeltaRed,
+    onSecondary = Color.White,
+    tertiary = DeltaOrange,
+    onTertiary = Color.Black,
+
+    background = Color(0xFF0B1220),
+    onBackground = Color.White,
+    surface = Color(0xFF0F1A2B),
+    onSurface = Color.White,
+    surfaceVariant = Color(0xFF16243A),
+    onSurfaceVariant = Color.White,
+    outline = Color(0xFF334155)
+)
+
 @Composable
 fun FDVFlightLoggerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
+    themeMode: ThemeMode,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val systemDark = isSystemInDarkTheme()
+
+    val colorScheme = when (themeMode) {
+        ThemeMode.LIGHT -> {
+            when {
+                dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                    dynamicLightColorScheme(LocalContext.current)
+                else -> LightColorScheme
+            }
         }
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        ThemeMode.DARK -> {
+            when {
+                dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                    dynamicDarkColorScheme(LocalContext.current)
+                else -> DarkColorScheme
+            }
+        }
+
+        ThemeMode.FDV -> {
+            if (systemDark) FdvDarkColorScheme else FdvLightColorScheme
+        }
     }
 
     MaterialTheme(
