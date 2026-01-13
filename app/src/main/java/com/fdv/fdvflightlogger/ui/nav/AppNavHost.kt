@@ -2,14 +2,16 @@ package com.fdv.fdvflightlogger.ui.nav
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.screens.FlightDetailScreen
+import com.fdv.fdvflightlogger.ui.screens.FlightHistoryScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightLogScreen
 import com.fdv.fdvflightlogger.ui.screens.SetupScreen
-import com.fdv.fdvflightlogger.ui.screens.FlightHistoryScreen
 
 @Composable
 fun AppNavHost(
@@ -35,20 +37,39 @@ fun AppNavHost(
             )
         }
 
+        // Normal “new flight” entry
         composable(Routes.FLIGHT_LOG) {
             FlightLogScreen(appViewModel = appViewModel, navController = navController)
         }
 
+        // History list
         composable(Routes.HISTORY) {
             FlightHistoryScreen(appViewModel = appViewModel, navController = navController)
         }
 
-        composable("detail/{id}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id")?.toLongOrNull() ?: -1L
+        // Detail screen
+        composable(
+            route = "detail/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getLong("id") ?: return@composable
             FlightDetailScreen(
                 appViewModel = appViewModel,
                 navController = navController,
                 flightId = id
+            )
+        }
+
+        // Edit entry (prefilled)
+        composable(
+            route = "log/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getLong("id") ?: return@composable
+            FlightLogScreen(
+                appViewModel = appViewModel,
+                navController = navController,
+                editFlightId = id
             )
         }
     }

@@ -64,11 +64,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveFlight(draft: FlightDraft) {
         viewModelScope.launch {
-            flightRepo.saveDraft(draft)
-            // Update “Last landed” immediately for identity strip
-            if (draft.arr.isNotBlank()) repo.setLastLanded(draft.arr)
+
+            val createdAtEpochMs = if (draft.id != null) {
+
+                flightRepo.getById(draft.id)?.createdAtEpochMs
+                    ?: System.currentTimeMillis()
+            } else {
+
+                System.currentTimeMillis()
+            }
+
+            flightRepo.saveDraft(
+                draft = draft,
+                createdAtEpochMs = createdAtEpochMs
+            )
+
+            if (draft.arr.isNotBlank()) {
+                repo.setLastLanded(draft.arr)
+            }
         }
     }
+
 
     fun observeFlights() = flightRepo.observeAll()
 
@@ -135,7 +151,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 flightRepo.delete(flight)
                 _events.tryEmit(UiEvent.Message("Flight deleted"))
-            } catch (t: Throwable) {
+            } catch (_: Throwable) {
                 _events.tryEmit(UiEvent.Message("Delete failed: ..."))
             }
         }

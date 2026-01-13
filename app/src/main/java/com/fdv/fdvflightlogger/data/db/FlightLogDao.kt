@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FlightLogDao {
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insert(entity: FlightLogEntity): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: FlightLogEntity): Long
 
     @Query("SELECT * FROM flight_logs ORDER BY createdAtEpochMs DESC")
     fun observeAll(): Flow<List<FlightLogEntity>>

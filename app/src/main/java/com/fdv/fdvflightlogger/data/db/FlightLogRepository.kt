@@ -10,26 +10,52 @@ class FlightLogRepository(context: Context) {
 
     fun observeAll(): Flow<List<FlightLogEntity>> = dao.observeAll()
 
-    suspend fun saveDraft(d: FlightDraft): Long {
+    suspend fun saveDraft(draft: FlightDraft, createdAtEpochMs: Long) {
         val entity = FlightLogEntity(
-            dep = d.dep, arr = d.arr,
-            depRwy = d.depRwy, depGate = d.depGate, sid = d.sid,
-            cruiseFl = d.cruiseFl, depFlaps = d.depFlaps, v2 = d.v2, route = d.route,
-            arrRwy = d.arrRwy, arrGate = d.arrGate, star = d.star,
-            altn = d.altn, qnh = d.qnh, vref = d.vref,
-            flightNumber = d.flightNumber, aircraft = d.aircraft, fuel = d.fuel,
-            pax = d.pax, payload = d.payload, airTime = d.airTime, blockTime = d.blockTime,
-            costIndex = d.costIndex, reserveFuel = d.reserveFuel, zfw = d.zfw,
-            crzWind = d.crzWind, crzOat = d.crzOat,
-            info = d.info, initAlt = d.initAlt, squawk = d.squawk,
-            scratchpad = d.scratchpad
+            id = draft.id ?: 0L,
+            createdAtEpochMs = createdAtEpochMs,
+            dep = draft.dep,
+            arr = draft.arr,
+            depRwy = draft.depRwy,
+            depGate = draft.depGate,
+            sid = draft.sid,
+            cruiseFl = draft.cruiseFl,
+            depFlaps = draft.depFlaps,
+            v2 = draft.v2,
+            route = draft.route,
+            arrRwy = draft.arrRwy,
+            arrGate = draft.arrGate,
+            star = draft.star,
+            altn = draft.altn,
+            qnh = draft.qnh,
+            vref = draft.vref,
+            flightNumber = draft.flightNumber,
+            aircraft = draft.aircraft,
+            fuel = draft.fuel,
+            pax = draft.pax,
+            payload = draft.payload,
+            airTime = draft.airTime,
+            blockTime = draft.blockTime,
+            costIndex = draft.costIndex,
+            reserveFuel = draft.reserveFuel,
+            zfw = draft.zfw,
+            crzWind = draft.crzWind,
+            crzOat = draft.crzOat,
+            info = draft.info,
+            initAlt = draft.initAlt,
+            squawk = draft.squawk,
+            scratchpad = draft.scratchpad
         )
-        return dao.insert(entity)
+
+        upsert(entity) // <- call the repo wrapper
     }
+
 
     suspend fun getAll(): List<FlightLogEntity> = dao.getAll()
 
     suspend fun getById(id: Long): FlightLogEntity? = dao.getById(id)
 
     suspend fun delete(flight: FlightLogEntity) = dao.deleteFlight(flight)
+
+    suspend fun upsert(entity: FlightLogEntity): Long = dao.upsert(entity)
 }

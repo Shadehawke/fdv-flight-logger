@@ -1,5 +1,8 @@
 package com.fdv.fdvflightlogger.ui.screens
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,8 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -30,8 +33,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
@@ -44,18 +50,34 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.mappers.toDraft
 
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+@Composable
+private fun rememberWindowWidthClass(): WindowWidthSizeClass {
+    val activity = LocalContext.current.findActivity()
+        ?: error("WindowSizeClass requires an Activity context")
+
+    // calculateWindowSizeClass is @Composable, so call it directly here (NOT inside remember {})
+    return calculateWindowSizeClass(activity).widthSizeClass
+}
 private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
     save = { d ->
         listOf(
+            d.id?.toString().orEmpty(),
             d.dep, d.arr,
             d.depRwy, d.depGate, d.sid, d.cruiseFl, d.depFlaps, d.v2, d.route,
             d.arrRwy, d.arrGate, d.star, d.altn, d.qnh, d.vref,
@@ -66,26 +88,34 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             d.scratchpad
         )
     },
-    restore = { list ->
-        val v = list.map { it as String }
+    restore = { raw ->
+        // Fixes "No cast needed" by making the restored list explicitly typed.
+        val v: List<String> = raw
+
         FlightDraft(
-            dep = v[0], arr = v[1],
-            depRwy = v[2], depGate = v[3], sid = v[4], cruiseFl = v[5],
-            depFlaps = v[6], v2 = v[7], route = v[8],
-            arrRwy = v[9], arrGate = v[10], star = v[11], altn = v[12],
-            qnh = v[13], vref = v[14],
-            flightNumber = v[15], aircraft = v[16], fuel = v[17], pax = v[18],
-            payload = v[19], airTime = v[20], blockTime = v[21], costIndex = v[22],
-            reserveFuel = v[23], zfw = v[24],
-            crzWind = v[25], crzOat = v[26],
-            info = v[27], initAlt = v[28], squawk = v[29],
-            scratchpad = v[30]
+            id = v[0].takeIf { it.isNotBlank() }?.toLong(),
+            dep = v[1], arr = v[2],
+            depRwy = v[3], depGate = v[4], sid = v[5], cruiseFl = v[6],
+            depFlaps = v[7], v2 = v[8], route = v[9],
+            arrRwy = v[10], arrGate = v[11], star = v[12], altn = v[13],
+            qnh = v[14], vref = v[15],
+            flightNumber = v[16], aircraft = v[17], fuel = v[18], pax = v[19],
+            payload = v[20], airTime = v[21], blockTime = v[22], costIndex = v[23],
+            reserveFuel = v[24], zfw = v[25],
+            crzWind = v[26], crzOat = v[27],
+            info = v[28], initAlt = v[29], squawk = v[30],
+            scratchpad = v[31]
         )
     }
 )
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FlightLogScreen(appViewModel: AppViewModel, navController: NavController) {
+fun FlightLogScreen(
+    appViewModel: AppViewModel,
+    navController: NavController,
+    editFlightId: Long? = null
+) {
     val state by appViewModel.state.collectAsStateWithLifecycle()
     val lastLandedDisplay = state.lastLanded.ifBlank { "--" }
 
@@ -93,11 +123,16 @@ fun FlightLogScreen(appViewModel: AppViewModel, navController: NavController) {
         mutableStateOf(FlightDraft())
     }
 
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val widthClass = when {
-        screenWidthDp >= 840 -> WindowWidthSizeClass.Expanded
-        screenWidthDp >= 600 -> WindowWidthSizeClass.Medium
-        else -> WindowWidthSizeClass.Compact
+    val widthClass = rememberWindowWidthClass()
+
+    // Load an existing flight into the editor when editFlightId is provided
+    LaunchedEffect(editFlightId) {
+        if (editFlightId != null) {
+            val e = appViewModel.getFlightById(editFlightId)
+            if (e != null) {
+                draft = e.toDraft()
+            }
+        }
     }
 
     Scaffold(
@@ -115,7 +150,6 @@ fun FlightLogScreen(appViewModel: AppViewModel, navController: NavController) {
             )
         }
     ) { padding ->
-
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -129,20 +163,20 @@ fun FlightLogScreen(appViewModel: AppViewModel, navController: NavController) {
             )
 
             SectionJumpChips(
-                onJump = { /* MVP: chips are purely visual until we add scroll anchors */ }
+                jumpToSection = { /* still visual-only until anchors */ }
             )
 
             Button(
                 onClick = {
                     appViewModel.saveFlight(draft)
-                    draft = FlightDraft()
+                    draft = FlightDraft() // reset after save
                 },
                 enabled = draft.dep.isNotBlank() && draft.arr.isNotBlank(),
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
             ) {
-                Text("Save Flight")
+                Text(if (editFlightId != null) "Update Flight" else "Save Flight")
             }
 
             when (widthClass) {
@@ -150,10 +184,12 @@ fun FlightLogScreen(appViewModel: AppViewModel, navController: NavController) {
                     draft = draft,
                     onDraftChange = { draft = it }
                 )
+
                 WindowWidthSizeClass.Medium -> MediumTwoColumnLayout(
                     draft = draft,
                     onDraftChange = { draft = it }
                 )
+
                 else -> CompactSingleColumnLayout(
                     draft = draft,
                     onDraftChange = { draft = it }
@@ -172,7 +208,6 @@ fun FlightLogScreen(appViewModel: AppViewModel, navController: NavController) {
     }
 }
 
-
 /* ------------------------------- Layouts ------------------------------- */
 
 @Composable
@@ -187,7 +222,6 @@ private fun CompactSingleColumnLayout(
             .fillMaxSize()
             .verticalScroll(scroll)
             .padding(16.dp),
-
     ) {
         RouteHeader(draft, onDraftChange)
 
@@ -278,14 +312,12 @@ private fun ExpandedWhiteboardLayout(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Left column: Departure + Enroute
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionCard(title = "Departure + Enroute") {
                     DepartureEnrouteFields(draft, onDraftChange)
                 }
             }
 
-            // Middle column: Arrival
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionCard(title = "Arrival") {
                     ArrivalFields(draft, onDraftChange)
@@ -298,7 +330,6 @@ private fun ExpandedWhiteboardLayout(
                 }
             }
 
-            // Right column: Aircraft/Perf
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionCard(title = "Aircraft + Performance") {
                     AircraftPerfFields(draft, onDraftChange)
@@ -337,23 +368,22 @@ private fun RouteHeader(
 }
 
 @Composable
-private fun DepartureEnrouteFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) {
+private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("RWY", d.depRwy, { onChange(d.copy(depRwy = it)) }, Modifier.weight(1f))
-        TextFieldSmall("Gate", d.depGate, { onChange(d.copy(depGate = it)) }, Modifier.weight(1f))
-        TextFieldSmall("SID", d.sid, { onChange(d.copy(sid = it)) }, Modifier.weight(1f))
+        TextFieldSmall("RWY", draft.depRwy, { onChange(draft.copy(depRwy = it)) }, Modifier.weight(1f))
+        TextFieldSmall("Gate", draft.depGate, { onChange(draft.copy(depGate = it)) }, Modifier.weight(1f))
+        TextFieldSmall("SID", draft.sid, { onChange(draft.copy(sid = it)) }, Modifier.weight(1f))
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Cruise (FL)", d.cruiseFl, { onChange(d.copy(cruiseFl = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
-        TextFieldSmall("Flaps", d.depFlaps, { onChange(d.copy(depFlaps = it)) }, Modifier.weight(1f))
-        TextFieldSmall("V2", d.v2, { onChange(d.copy(v2 = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("Cruise (FL)", draft.cruiseFl, { onChange(draft.copy(cruiseFl = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("Flaps", draft.depFlaps, { onChange(draft.copy(depFlaps = it)) }, Modifier.weight(1f))
+        TextFieldSmall("V2", draft.v2, { onChange(draft.copy(v2 = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 
-    TextFieldLarge(
-        label = "Route",
-        value = d.route,
-        onChange = { onChange(d.copy(route = it)) }
+    RouteTextField(
+        value = draft.route,
+        onChange = { onChange(draft.copy(route = it)) }
     )
 }
 
@@ -426,7 +456,7 @@ private fun IdentityStrip(
 }
 
 @Composable
-private fun SectionJumpChips(onJump: (String) -> Unit) {
+private fun SectionJumpChips(jumpToSection: (String) -> Unit) {
     val scroll = rememberScrollState()
 
     Box(
@@ -435,39 +465,34 @@ private fun SectionJumpChips(onJump: (String) -> Unit) {
             .padding(bottom = 8.dp)
     ) {
         Row(
-            modifier = Modifier
-                .horizontalScroll(scroll),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+            modifier = Modifier.horizontalScroll(scroll),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            AssistChip(onClick = { onJump("dep") }, label = { Text("Departure") })
-            AssistChip(onClick = { onJump("arr") }, label = { Text("Arrival") })
-            AssistChip(onClick = { onJump("ac") }, label = { Text("Aircraft") })
-            AssistChip(onClick = { onJump("atc") }, label = { Text("ATC") })
-            AssistChip(onClick = { onJump("notes") }, label = { Text("Notes") })
+            AssistChip(onClick = { jumpToSection("dep") }, label = { Text("Departure") })
+            AssistChip(onClick = { jumpToSection("arr") }, label = { Text("Arrival") })
+            AssistChip(onClick = { jumpToSection("ac") }, label = { Text("Aircraft") })
+            AssistChip(onClick = { jumpToSection("atc") }, label = { Text("ATC") })
+            AssistChip(onClick = { jumpToSection("notes") }, label = { Text("Notes") })
         }
 
-        // Right-edge affordance: fade + chevron (only shows when there is more to scroll)
         val canScrollMore = scroll.value < scroll.maxValue
         if (canScrollMore) {
-            RightEdgeFadeWithChevron(
-                modifier = Modifier.align(Alignment.CenterEnd)
-            )
+            RightEdgeFadeWithChevron(modifier = Modifier.align(Alignment.CenterEnd))
         }
     }
 }
 
+
 @Composable
 private fun RightEdgeFadeWithChevron(modifier: Modifier = Modifier) {
-    // Use surface/background tones so it blends with themes
     val bg = MaterialTheme.colorScheme.background
     val fadeWidth = 28.dp
 
     Box(
         modifier = modifier
-            .graphicsLayer { } // forces a draw layer
+            .graphicsLayer { }
             .padding(end = 0.dp)
     ) {
-        // Fade overlay
         androidx.compose.foundation.Canvas(
             modifier = Modifier
                 .padding(end = 0.dp)
@@ -482,7 +507,6 @@ private fun RightEdgeFadeWithChevron(modifier: Modifier = Modifier) {
             )
         }
 
-        // Chevron overlay
         Icon(
             imageVector = Icons.Filled.ChevronRight,
             contentDescription = "Scroll for more",
@@ -503,11 +527,10 @@ private fun SectionCard(
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                content()
-            }
-        )
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            content()
+        }
     }
 }
 
@@ -534,19 +557,19 @@ private fun TextFieldSmall(
 }
 
 @Composable
-private fun TextFieldLarge(
-    label: String,
+private fun RouteTextField(
     value: String,
     onChange: (String) -> Unit
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label) },
+        label = { Text("Route") },
         minLines = 2,
         modifier = Modifier.fillMaxWidth()
     )
 }
+
 
 @Composable
 private fun NotesField(
@@ -602,3 +625,4 @@ private fun AtcStrip(
         }
     }
 }
+

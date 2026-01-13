@@ -1,6 +1,8 @@
 package com.fdv.fdvflightlogger.ui.screens
 
 data class FlightDraft(
+    val id: Long? = null,
+
     val dep: String = "",
     val arr: String = "",
 
@@ -24,11 +26,13 @@ data class FlightDraft(
     val fuel: String = "",
     val pax: String = "",
     val payload: String = "",
+
     val airTime: String = "",
     val blockTime: String = "",
     val costIndex: String = "",
     val reserveFuel: String = "",
     val zfw: String = "",
+
     val crzWind: String = "",
     val crzOat: String = "",
 

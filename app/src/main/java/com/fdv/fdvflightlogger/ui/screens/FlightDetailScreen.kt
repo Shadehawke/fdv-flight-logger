@@ -1,13 +1,39 @@
 package com.fdv.fdvflightlogger.ui.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,7 +51,8 @@ fun FlightDetailScreen(
     var flight by remember { mutableStateOf<FlightLogEntity?>(null) }
     var loading by remember { mutableStateOf(true) }
     var notFound by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
+
+    val confirmDelete = rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(flightId) {
         loading = true
@@ -33,30 +60,6 @@ fun FlightDetailScreen(
         flight = appViewModel.getFlightById(flightId)
         loading = false
         notFound = (flight == null)
-    }
-
-    // Confirm delete dialog
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete flight?") },
-            text = { Text("This cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val toDelete = flight
-                        confirmDelete = false
-                        if (toDelete != null) {
-                            appViewModel.deleteFlight(toDelete)
-                            navController.popBackStack()
-                        }
-                    }
-                ) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
-            }
-        )
     }
 
     Scaffold(
@@ -74,12 +77,16 @@ fun FlightDetailScreen(
                 actions = {
                     IconButton(
                         enabled = !loading && flight != null,
-                        onClick = { confirmDelete = true }
+                        onClick = { navController.navigate("log/$flightId") }
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "Delete"
-                        )
+                        Icon(Icons.Filled.Edit, contentDescription = "Edit")
+                    }
+
+                    IconButton(
+                        enabled = !loading && flight != null,
+                        onClick = { confirmDelete.value = true }
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete")
                     }
                 }
             )
@@ -92,20 +99,18 @@ fun FlightDetailScreen(
                         .fillMaxSize()
                         .padding(padding),
                     contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                ) { CircularProgressIndicator() }
             }
+
             notFound -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("Flight not found.")
-                }
+                ) { Text("Flight not found.") }
             }
+
             else -> {
                 FlightDetailContent(
                     flight = requireNotNull(flight),
@@ -113,6 +118,27 @@ fun FlightDetailScreen(
                 )
             }
         }
+    }
+
+    // Dialog as sibling to avoid any "assigned but never read" false positives.
+    if (confirmDelete.value) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete.value = false },
+            title = { Text("Delete flight?") },
+            text = { Text("This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        confirmDelete.value = false
+                        flight?.let { appViewModel.deleteFlight(it) }
+                        navController.popBackStack()
+                    }
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                Button(onClick = { confirmDelete.value = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
@@ -131,13 +157,20 @@ private fun FlightDetailContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         ElevatedCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(
+                Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Text("${flight.dep} → ${flight.arr}", style = MaterialTheme.typography.titleLarge)
+
                 val meta = listOfNotNull(
                     flight.flightNumber.takeIf { it.isNotBlank() },
                     flight.aircraft.takeIf { it.isNotBlank() }
                 ).joinToString(" • ")
-                if (meta.isNotBlank()) Text(meta, style = MaterialTheme.typography.bodyMedium)
+
+                if (meta.isNotBlank()) {
+                    Text(meta, style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
 
@@ -172,7 +205,10 @@ private fun FlightDetailContent(
 @Composable
 private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             content()
         }
@@ -185,10 +221,17 @@ private fun ReadRow(
     l2: String, v2: String,
     l3: String, v3: String
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         ReadField(l1, v1, Modifier.weight(1f))
         ReadField(l2, v2, Modifier.weight(1f))
-        if (l3.isNotBlank()) ReadField(l3, v3, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+        if (l3.isNotBlank()) {
+            ReadField(l3, v3, Modifier.weight(1f))
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
     }
 }
 
