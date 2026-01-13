@@ -3,6 +3,7 @@ package com.fdv.fdvflightlogger.ui.screens
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -123,16 +126,55 @@ fun FlightLogScreen(
         mutableStateOf(FlightDraft())
     }
 
+    var initialDraft by rememberSaveable(stateSaver = FlightDraftSaver) {
+        mutableStateOf(FlightDraft())
+    }
+
+    val confirmDiscard = rememberSaveable { mutableStateOf(false) }
+
+    val isDirty = draft.normalizedForDirtyCheck() != initialDraft.normalizedForDirtyCheck()
+
     val widthClass = rememberWindowWidthClass()
 
-    // Load an existing flight into the editor when editFlightId is provided
     LaunchedEffect(editFlightId) {
         if (editFlightId != null) {
             val e = appViewModel.getFlightById(editFlightId)
             if (e != null) {
-                draft = e.toDraft()
+                val loaded = e.toDraft()
+                draft = loaded
+                initialDraft = loaded
             }
+        } else {
+            // Creating a new flight: baseline is blank
+            val blank = FlightDraft()
+            draft = blank
+            initialDraft = blank
         }
+    }
+
+    BackHandler(enabled = isDirty) {
+        confirmDiscard.value = true
+    }
+
+    if (confirmDiscard.value) {
+        AlertDialog(
+            onDismissRequest = { confirmDiscard.value = false },
+            title = { Text("Discard changes?") },
+            text = { Text("You have unsaved changes. Discard them and leave this screen?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDiscard.value = false
+                        // Revert to baseline so you don't leak edits if you stay
+                        draft = initialDraft
+                        navController.popBackStack()
+                    }
+                ) { Text("Discard") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDiscard.value = false }) { Text("Keep editing") }
+            }
+        )
     }
 
     Scaffold(
@@ -169,7 +211,16 @@ fun FlightLogScreen(
             Button(
                 onClick = {
                     appViewModel.saveFlight(draft)
-                    draft = FlightDraft() // reset after save
+
+                    if (editFlightId != null) {
+                        // Edit mode: keep current values, but mark them as “saved”
+                        initialDraft = draft
+                    } else {
+                        // Create mode: clear the form and baseline
+                        val blank = FlightDraft()
+                        draft = blank
+                        initialDraft = blank
+                    }
                 },
                 enabled = draft.dep.isNotBlank() && draft.arr.isNotBlank(),
                 modifier = Modifier
@@ -625,4 +676,10 @@ private fun AtcStrip(
         }
     }
 }
+
+private fun FlightDraft.normalizedForDirtyCheck(): FlightDraft = copy(
+    route = route.trimEnd(),
+    scratchpad = scratchpad.trimEnd()
+)
+
 
