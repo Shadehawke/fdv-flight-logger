@@ -39,39 +39,57 @@ private val LightColorScheme = lightColorScheme(
 private val FdvLightColorScheme = lightColorScheme(
     primary = DeltaBlue,
     onPrimary = Color.White,
+
     secondary = DeltaRed,
     onSecondary = Color.White,
 
-    // Use tertiary sparingly in UI (chips/icons, not large surfaces)
-    tertiary = DeltaOrange,
-    onTertiary = Color.Black,
+    // Limited tertiary usage per brand guidance; keep it available but not dominant
+    tertiary = DeltaLightBlue,
+    onTertiary = Color.White,
 
-    background = Color.White,
-    onBackground = DeltaDarkBlue,
+    background = Color(0xFFF5F7FA),
+    onBackground = Color(0xFF0E1A2B),
+
     surface = Color.White,
-    onSurface = DeltaDarkBlue,
-    surfaceVariant = Color(0xFFF2F4F7),
-    onSurfaceVariant = DeltaDarkBlue,
-    outline = Color(0xFFCBD5E1)
+    onSurface = Color(0xFF0E1A2B),
+
+    surfaceVariant = Color(0xFFE6ECF3),
+    onSurfaceVariant = Color(0xFF23364D),
+
+    outline = Color(0xFF8AA0B8),
+    outlineVariant = Color(0xFFC9D6E4),
+
+    error = Color(0xFFB3261E),
+    onError = Color.White
 )
 
 private val FdvDarkColorScheme = darkColorScheme(
-    // Better contrast on dark surfaces than pure DeltaBlue
+    // In dark mode, DeltaBlue as "primary" can be too deep; use lighter blue for accents.
     primary = DeltaLightBlue,
-    onPrimary = Color.Black,
+    onPrimary = Color(0xFF07121F),
+
     secondary = DeltaRed,
     onSecondary = Color.White,
-    tertiary = DeltaOrange,
-    onTertiary = Color.Black,
 
-    background = Color(0xFF0B1220),
-    onBackground = Color.White,
-    surface = Color(0xFF0F1A2B),
-    onSurface = Color.White,
-    surfaceVariant = Color(0xFF16243A),
-    onSurfaceVariant = Color.White,
-    outline = Color(0xFF334155)
+    tertiary = DeltaGreen,
+    onTertiary = Color(0xFF07121F),
+
+    background = Color(0xFF0B1422),
+    onBackground = Color(0xFFEAF0F8),
+
+    surface = Color(0xFF101E33),
+    onSurface = Color(0xFFEAF0F8),
+
+    surfaceVariant = Color(0xFF162844),
+    onSurfaceVariant = Color(0xFFC9D6E4),
+
+    outline = Color(0xFF2C4568),
+    outlineVariant = Color(0xFF23364D),
+
+    error = Color(0xFFF2B8B5),
+    onError = Color(0xFF601410)
 )
+
 
 @Composable
 fun FDVFlightLoggerTheme(
@@ -82,6 +100,12 @@ fun FDVFlightLoggerTheme(
     val systemDark = isSystemInDarkTheme()
 
     val colorScheme = when (themeMode) {
+
+        ThemeMode.FDV -> {
+            // Brand palette must not be overridden by dynamic color
+            if (systemDark) FdvDarkColorScheme else FdvLightColorScheme
+        }
+
         ThemeMode.LIGHT -> {
             when {
                 dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
@@ -96,10 +120,6 @@ fun FDVFlightLoggerTheme(
                     dynamicDarkColorScheme(LocalContext.current)
                 else -> DarkColorScheme
             }
-        }
-
-        ThemeMode.FDV -> {
-            if (systemDark) FdvDarkColorScheme else FdvLightColorScheme
         }
     }
 

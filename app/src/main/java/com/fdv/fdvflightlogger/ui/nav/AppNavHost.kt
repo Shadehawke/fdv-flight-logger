@@ -12,6 +12,7 @@ import com.fdv.fdvflightlogger.ui.screens.FlightDetailScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightHistoryScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightLogScreen
 import com.fdv.fdvflightlogger.ui.screens.SetupScreen
+import com.fdv.fdvflightlogger.ui.screens.SettingsScreen
 
 @Composable
 fun AppNavHost(
@@ -70,6 +71,13 @@ fun AppNavHost(
                 appViewModel = appViewModel,
                 navController = navController,
                 editFlightId = id
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                appViewModel = appViewModel,
+                navController = navController
             )
         }
     }

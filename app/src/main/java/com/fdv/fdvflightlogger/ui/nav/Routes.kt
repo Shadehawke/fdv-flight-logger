@@ -5,4 +5,6 @@ object Routes {
     const val FLIGHT_LOG = "flight_log"
     const val HISTORY = "history"
 
+    const val SETTINGS = "settings"
+
 }
