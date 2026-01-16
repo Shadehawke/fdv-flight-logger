@@ -25,6 +25,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
+        setTheme(R.style.Theme_FDVFlightLogger)
+
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -46,18 +48,11 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val startDestination = if (state.isSetupComplete) {
-                    Routes.FLIGHT_LOG
-                } else {
-                    Routes.SETUP
-                }
-
                 Scaffold(
                     snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
                 ) { padding ->
                     AppNavHost(
                         appViewModel = appViewModel,
-                        startDestination = startDestination,
                         modifier = Modifier.padding(padding)
                     )
                 }

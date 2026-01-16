@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.FDVFlightLogger" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.FDVFlightLogger" parent="Theme.Material3.DayNight.NoActionBar" />
     <style name="Theme.FDVFlightLogger.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/delta_blue</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_fdv_splash</item>
-        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
-        <item name="postSplashScreenTheme">@style/Theme.FDVFlightLogger</item>
+        <item name="android:windowSplashScreenBackground">@color/delta_blue</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_fdv_splash</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
     </style>
+
 </resources>

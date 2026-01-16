@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:gravity="center">
+        <scale
+            android:drawable="@drawable/ic_fdv_branding"
+            android:gravity="center"
+            android:scaleWidth="0.65"
+            android:scaleHeight="0.65" />
+    </item>
+
+</layer-list>
