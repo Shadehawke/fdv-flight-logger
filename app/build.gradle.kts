@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.fdv.fdvflightlogger"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.fdv.fdvflightlogger"
@@ -30,15 +28,16 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
+
+    kotlinOptions {
+        jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
@@ -61,6 +60,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -68,8 +68,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.google.material)
-    implementation(platform(libs.kotlinx.serialization.bom))
-    implementation(libs.kotlinx.serialization.json)
+    // implementation(platform(libs.kotlinx.serialization.bom))
+    // implementation(libs.kotlinx.serialization.json)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
