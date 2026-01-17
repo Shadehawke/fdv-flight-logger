@@ -14,10 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fdv.fdvflightlogger.ui.AppViewModel
-import com.fdv.fdvflightlogger.ui.nav.AppNavHost
-import com.fdv.fdvflightlogger.ui.nav.Routes
-import com.fdv.fdvflightlogger.ui.theme.FDVFlightLoggerTheme
 import com.fdv.fdvflightlogger.ui.UiEvent
+import com.fdv.fdvflightlogger.ui.nav.AppNavHost
+import com.fdv.fdvflightlogger.ui.theme.FDVFlightLoggerTheme
 
 class MainActivity : ComponentActivity() {
 
