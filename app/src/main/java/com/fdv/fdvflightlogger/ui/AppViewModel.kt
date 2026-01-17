@@ -9,7 +9,6 @@ import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightLogRepository
 import com.fdv.fdvflightlogger.data.prefs.AppSettings
 import com.fdv.fdvflightlogger.data.prefs.PilotProfile
-import com.fdv.fdvflightlogger.data.prefs.ThemeMode
 import com.fdv.fdvflightlogger.data.prefs.UserPrefsRepository
 import com.fdv.fdvflightlogger.export.ExportCsv
 import com.fdv.fdvflightlogger.export.ExportPdf
@@ -65,23 +64,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveFlight(draft: FlightDraft) {
         viewModelScope.launch {
+            try {
+                val createdAtEpochMs = if (draft.id != null) {
+                    flightRepo.getById(draft.id)?.createdAtEpochMs
+                        ?: System.currentTimeMillis()
+                } else {
+                    System.currentTimeMillis()
+                }
 
-            val createdAtEpochMs = if (draft.id != null) {
+                flightRepo.saveDraft(draft = draft, createdAtEpochMs = createdAtEpochMs)
 
-                flightRepo.getById(draft.id)?.createdAtEpochMs
-                    ?: System.currentTimeMillis()
-            } else {
+                if (draft.arr.isNotBlank()) {
+                    repo.setLastLanded(draft.arr)
+                }
 
-                System.currentTimeMillis()
-            }
-
-            flightRepo.saveDraft(
-                draft = draft,
-                createdAtEpochMs = createdAtEpochMs
-            )
-
-            if (draft.arr.isNotBlank()) {
-                repo.setLastLanded(draft.arr)
+                _events.tryEmit(UiEvent.Message("Flight saved"))  // ← Add success feedback
+            } catch (e: Throwable) {
+                _events.tryEmit(UiEvent.Message("Save failed: ${e.message ?: "Unknown error"}"))
             }
         }
     }
@@ -90,19 +89,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveSetup(profile: PilotProfile, settings: AppSettings) {
         viewModelScope.launch {
-            repo.savePilotProfile(profile)
-            repo.saveSettings(settings)
+            try {
+                repo.savePilotProfile(profile)
+                repo.saveSettings(settings)
+                _events.tryEmit(UiEvent.Message("Setup complete"))
+            } catch (e: Throwable) {
+                _events.tryEmit(UiEvent.Message("Setup failed: ${e.message ?: "Unknown error"}"))
+            }
         }
     }
 
-    @Suppress("unused")
-    fun setThemeMode(mode: ThemeMode) {
-        viewModelScope.launch {
-            repo.setThemeMode(mode)
-        }
-    }
-
-    @Suppress("unused")
     fun updateSettings(transform: (AppSettings) -> AppSettings) {
         viewModelScope.launch {
             val current = state.value.settings
@@ -166,8 +162,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 flightRepo.delete(flight)
                 _events.tryEmit(UiEvent.Message("Flight deleted"))
-            } catch (_: Throwable) {
-                _events.tryEmit(UiEvent.Message("Delete failed: ..."))
+            } catch (e: Throwable) {  // ← Capture exception
+                _events.tryEmit(UiEvent.Message("Delete failed: ${e.message ?: "Unknown error"}"))
             }
         }
     }
