@@ -164,8 +164,8 @@ private fun FlightDetailContent(
                 Text("${flight.dep} → ${flight.arr}", style = MaterialTheme.typography.titleLarge)
 
                 val meta = listOfNotNull(
-                    flight.flightNumber.takeIf { it.isNotBlank() },
-                    flight.aircraft.takeIf { it.isNotBlank() }
+                    flight.flightNumber?.takeIf { it.isNotBlank() },  // ← Added ?.
+                    flight.aircraft?.takeIf { it.isNotBlank() }       // ← Added ?.
                 ).joinToString(" • ")
 
                 if (meta.isNotBlank()) {
@@ -175,29 +175,29 @@ private fun FlightDetailContent(
         }
 
         SectionCard("Departure + Enroute") {
-            ReadRow("RWY", flight.depRwy, "Gate", flight.depGate, "SID", flight.sid)
-            ReadRow("Cruise (FL)", flight.cruiseFl, "Flaps", flight.depFlaps, "V2", flight.v2)
-            ReadBlock("Route", flight.route)
+            ReadRow("RWY", flight.depRwy.orEmpty(), "Gate", flight.depGate.orEmpty(), "SID", flight.sid.orEmpty())
+            ReadRow("Cruise (FL)", flight.cruiseFl.orEmpty(), "Flaps", flight.depFlaps.orEmpty(), "V2", flight.v2.orEmpty())
+            ReadBlock("Route", flight.route.orEmpty())
         }
 
         SectionCard("Arrival") {
-            ReadRow("RWY", flight.arrRwy, "Gate", flight.arrGate, "STAR", flight.star)
-            ReadRow("ALTN", flight.altn, "QNH", flight.qnh, "Vref", flight.vref)
+            ReadRow("RWY", flight.arrRwy.orEmpty(), "Gate", flight.arrGate.orEmpty(), "STAR", flight.star.orEmpty())
+            ReadRow("ALTN", flight.altn.orEmpty(), "QNH", flight.qnh.orEmpty(), "Vref", flight.vref.orEmpty())
         }
 
         SectionCard("Aircraft + Performance") {
-            ReadRow("Fuel", flight.fuel, "PAX", flight.pax, "Payload", flight.payload)
-            ReadRow("B. Time", flight.blockTime, "A. Time", flight.airTime, "CI", flight.costIndex)
-            ReadRow("R. Fuel", flight.reserveFuel, "ZFW", flight.zfw, "", "")
-            ReadRow("Crz. Wind", flight.crzWind, "Crz. OAT", flight.crzOat, "", "")
+            ReadRow("Fuel", flight.fuel.orEmpty(), "PAX", flight.pax.orEmpty(), "Payload", flight.payload.orEmpty())
+            ReadRow("B. Time", flight.blockTime.orEmpty(), "A. Time", flight.airTime.orEmpty(), "CI", flight.costIndex.orEmpty())
+            ReadRow("R. Fuel", flight.reserveFuel.orEmpty(), "ZFW", flight.zfw.orEmpty(), "", "")
+            ReadRow("Crz. Wind", flight.crzWind.orEmpty(), "Crz. OAT", flight.crzOat.orEmpty(), "", "")
         }
 
         SectionCard("ATC") {
-            ReadRow("Info", flight.info, "Init. Alt.", flight.initAlt, "Sqwk", flight.squawk)
+            ReadRow("Info", flight.info.orEmpty(), "Init. Alt.", flight.initAlt.orEmpty(), "Sqwk", flight.squawk.orEmpty())
         }
 
         SectionCard("Notes") {
-            ReadBlock("Scratchpad", flight.scratchpad)
+            ReadBlock("Scratchpad", flight.scratchpad.orEmpty())
         }
     }
 }

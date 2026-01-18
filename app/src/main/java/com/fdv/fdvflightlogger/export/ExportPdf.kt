@@ -260,21 +260,21 @@ object ExportPdf {
         val date = dateFmt.format(Instant.ofEpochMilli(f.createdAtEpochMs))
 
         val notes = when {
-            f.scratchpad.isNotBlank() -> f.scratchpad.replace("\n", " ").trim()
-            f.route.isNotBlank() -> "Route: ${f.route}".trim()
+            !f.scratchpad.isNullOrBlank() -> f.scratchpad.replace("\n", " ").trim()
+            !f.route.isNullOrBlank() -> "Route: ${f.route}".trim()
             else -> ""
         }
 
         return listOf(
             date,
-            f.flightNumber,
-            f.aircraft,
-            f.dep,
+            f.flightNumber.orEmpty(),
+            f.aircraft.orEmpty(),
+            f.dep,  // ← dep and arr are non-nullable, keep as-is
             f.arr,
-            f.blockTime,
-            f.airTime,
-            f.fuel,
-            f.zfw,
+            f.blockTime.orEmpty(),
+            f.airTime.orEmpty(),
+            f.fuel.orEmpty(),
+            f.zfw.orEmpty(),
             notes
         )
     }

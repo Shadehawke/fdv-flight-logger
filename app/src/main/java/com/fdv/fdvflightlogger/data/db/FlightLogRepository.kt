@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 class FlightLogRepository(context: Context) {
 
-    private val dao = FdvDatabase.get(context).flightLogDao()
+    private val dao = FdvDatabase.getDatabase(context).flightLogDao()
 
     fun observeAll(): Flow<List<FlightLogEntity>> = dao.observeAll()
 

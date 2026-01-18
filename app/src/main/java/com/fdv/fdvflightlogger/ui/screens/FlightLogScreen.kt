@@ -85,34 +85,76 @@ private fun rememberWindowWidthClass(): WindowWidthSizeClass {
 private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
     save = { d ->
         listOf(
-            d.id?.toString().orEmpty(),
-            d.dep, d.arr,
-            d.depRwy, d.depGate, d.sid, d.cruiseFl, d.depFlaps, d.v2, d.route,
-            d.arrRwy, d.arrGate, d.star, d.altn, d.qnh, d.vref,
-            d.flightNumber, d.aircraft, d.fuel, d.pax, d.payload,
-            d.airTime, d.blockTime, d.costIndex, d.reserveFuel, d.zfw,
-            d.crzWind, d.crzOat,
-            d.info, d.initAlt, d.squawk,
-            d.scratchpad
+            d.id?.toString() ?: "",
+            d.dep,
+            d.arr,
+            d.depRwy ?: "",
+            d.depGate ?: "",
+            d.sid ?: "",
+            d.cruiseFl ?: "",
+            d.depFlaps ?: "",
+            d.v2 ?: "",
+            d.route ?: "",
+            d.arrRwy ?: "",
+            d.arrGate ?: "",
+            d.star ?: "",
+            d.altn ?: "",
+            d.qnh ?: "",
+            d.vref ?: "",
+            d.flightNumber ?: "",
+            d.aircraft ?: "",
+            d.fuel ?: "",
+            d.pax ?: "",
+            d.payload ?: "",
+            d.airTime ?: "",
+            d.blockTime ?: "",
+            d.costIndex ?: "",
+            d.reserveFuel ?: "",
+            d.zfw ?: "",
+            d.crzWind ?: "",
+            d.crzOat ?: "",
+            d.info ?: "",
+            d.initAlt ?: "",
+            d.squawk ?: "",
+            d.scratchpad ?: ""
         )
     },
     restore = { raw ->
-        // Fixes "No cast needed" by making the restored list explicitly typed.
-        val v: List<String> = raw
+        val v = raw as List<*>
 
         FlightDraft(
-            id = v[0].takeIf { it.isNotBlank() }?.toLong(),
-            dep = v[1], arr = v[2],
-            depRwy = v[3], depGate = v[4], sid = v[5], cruiseFl = v[6],
-            depFlaps = v[7], v2 = v[8], route = v[9],
-            arrRwy = v[10], arrGate = v[11], star = v[12], altn = v[13],
-            qnh = v[14], vref = v[15],
-            flightNumber = v[16], aircraft = v[17], fuel = v[18], pax = v[19],
-            payload = v[20], airTime = v[21], blockTime = v[22], costIndex = v[23],
-            reserveFuel = v[24], zfw = v[25],
-            crzWind = v[26], crzOat = v[27],
-            info = v[28], initAlt = v[29], squawk = v[30],
-            scratchpad = v[31]
+            id = (v[0] as? String)?.takeIf { it.isNotBlank() }?.toLongOrNull(),
+            dep = v[1] as String,
+            arr = v[2] as String,
+            depRwy = (v[3] as? String)?.takeIf { it.isNotBlank() },
+            depGate = (v[4] as? String)?.takeIf { it.isNotBlank() },
+            sid = (v[5] as? String)?.takeIf { it.isNotBlank() },
+            cruiseFl = (v[6] as? String)?.takeIf { it.isNotBlank() },
+            depFlaps = (v[7] as? String)?.takeIf { it.isNotBlank() },
+            v2 = (v[8] as? String)?.takeIf { it.isNotBlank() },
+            route = (v[9] as? String)?.takeIf { it.isNotBlank() },
+            arrRwy = (v[10] as? String)?.takeIf { it.isNotBlank() },
+            arrGate = (v[11] as? String)?.takeIf { it.isNotBlank() },
+            star = (v[12] as? String)?.takeIf { it.isNotBlank() },
+            altn = (v[13] as? String)?.takeIf { it.isNotBlank() },
+            qnh = (v[14] as? String)?.takeIf { it.isNotBlank() },
+            vref = (v[15] as? String)?.takeIf { it.isNotBlank() },
+            flightNumber = (v[16] as? String)?.takeIf { it.isNotBlank() },
+            aircraft = (v[17] as? String)?.takeIf { it.isNotBlank() },
+            fuel = (v[18] as? String)?.takeIf { it.isNotBlank() },
+            pax = (v[19] as? String)?.takeIf { it.isNotBlank() },
+            payload = (v[20] as? String)?.takeIf { it.isNotBlank() },
+            airTime = (v[21] as? String)?.takeIf { it.isNotBlank() },
+            blockTime = (v[22] as? String)?.takeIf { it.isNotBlank() },
+            costIndex = (v[23] as? String)?.takeIf { it.isNotBlank() },
+            reserveFuel = (v[24] as? String)?.takeIf { it.isNotBlank() },
+            zfw = (v[25] as? String)?.takeIf { it.isNotBlank() },
+            crzWind = (v[26] as? String)?.takeIf { it.isNotBlank() },
+            crzOat = (v[27] as? String)?.takeIf { it.isNotBlank() },
+            info = (v[28] as? String)?.takeIf { it.isNotBlank() },
+            initAlt = (v[29] as? String)?.takeIf { it.isNotBlank() },
+            squawk = (v[30] as? String)?.takeIf { it.isNotBlank() },
+            scratchpad = (v[31] as? String)?.takeIf { it.isNotBlank() }
         )
     }
 )
@@ -308,8 +350,8 @@ private fun CompactSingleColumnLayout(
 
         SectionCard(title = "Scratchpad") {
             NotesField(
-                value = draft.scratchpad,
-                onChange = { onDraftChange(draft.copy(scratchpad = it)) }
+                value = draft.scratchpad.orEmpty(),
+                onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
             )
         }
 
@@ -352,8 +394,8 @@ private fun MediumTwoColumnLayout(
                 }
                 SectionCard(title = "Scratchpad") {
                     NotesField(
-                        value = draft.scratchpad,
-                        onChange = { onDraftChange(draft.copy(scratchpad = it)) }
+                        value = draft.scratchpad.orEmpty(),
+                        onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
                     )
                 }
             }
@@ -393,8 +435,8 @@ private fun ExpandedWhiteboardLayout(
                 }
                 SectionCard(title = "Scratchpad") {
                     NotesField(
-                        value = draft.scratchpad,
-                        onChange = { onDraftChange(draft.copy(scratchpad = it)) }
+                        value = draft.scratchpad.orEmpty(),
+                        onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
                     )
                 }
             }
@@ -439,65 +481,65 @@ private fun RouteHeader(
 @Composable
 private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("RWY", draft.depRwy, { onChange(draft.copy(depRwy = it)) }, Modifier.weight(1f))
-        TextFieldSmall("Gate", draft.depGate, { onChange(draft.copy(depGate = it)) }, Modifier.weight(1f))
-        TextFieldSmall("SID", draft.sid, { onChange(draft.copy(sid = it)) }, Modifier.weight(1f))
+        TextFieldSmall("RWY", draft.depRwy.orEmpty(), { onChange(draft.copy(depRwy = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("Gate", draft.depGate.orEmpty(), { onChange(draft.copy(depGate = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("SID", draft.sid.orEmpty(), { onChange(draft.copy(sid = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Cruise (FL)", draft.cruiseFl, { onChange(draft.copy(cruiseFl = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
-        TextFieldSmall("Flaps", draft.depFlaps, { onChange(draft.copy(depFlaps = it)) }, Modifier.weight(1f))
-        TextFieldSmall("V2", draft.v2, { onChange(draft.copy(v2 = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("Cruise (FL)", draft.cruiseFl.orEmpty(), { onChange(draft.copy(cruiseFl = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("Flaps", draft.depFlaps.orEmpty(), { onChange(draft.copy(depFlaps = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("V2", draft.v2.orEmpty(), { onChange(draft.copy(v2 = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 
     RouteTextField(
-        value = draft.route,
-        onChange = { onChange(draft.copy(route = it)) }
+        value = draft.route.orEmpty(),
+        onChange = { onChange(draft.copy(route = it.takeIf { s -> s.isNotBlank() })) }
     )
 }
 
 @Composable
 private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("RWY", d.arrRwy, { onChange(d.copy(arrRwy = it)) }, Modifier.weight(1f))
-        TextFieldSmall("Gate", d.arrGate, { onChange(d.copy(arrGate = it)) }, Modifier.weight(1f))
-        TextFieldSmall("STAR", d.star, { onChange(d.copy(star = it)) }, Modifier.weight(1f))
+        TextFieldSmall("RWY", d.arrRwy.orEmpty(), { onChange(d.copy(arrRwy = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("Gate", d.arrGate.orEmpty(), { onChange(d.copy(arrGate = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("STAR", d.star.orEmpty(), { onChange(d.copy(star = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("ALTN", d.altn, { onChange(d.copy(altn = it.uppercase())) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
-        TextFieldSmall("QNH", d.qnh, { onChange(d.copy(qnh = it)) }, Modifier.weight(1f))
-        TextFieldSmall("Vref", d.vref, { onChange(d.copy(vref = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("ALTN", d.altn.orEmpty(), { onChange(d.copy(altn = it.uppercase().takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
+        TextFieldSmall("QNH", d.qnh.orEmpty(), { onChange(d.copy(qnh = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("Vref", d.vref.orEmpty(), { onChange(d.copy(vref = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 }
 
 @Composable
 private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Flight #", d.flightNumber, { onChange(d.copy(flightNumber = it.uppercase())) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
-        TextFieldSmall("Aircraft", d.aircraft, { onChange(d.copy(aircraft = it.uppercase())) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
+        TextFieldSmall("Flight #", d.flightNumber.orEmpty(), { onChange(d.copy(flightNumber = it.uppercase().takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
+        TextFieldSmall("Aircraft", d.aircraft.orEmpty(), { onChange(d.copy(aircraft = it.uppercase().takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Fuel", d.fuel, { onChange(d.copy(fuel = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
-        TextFieldSmall("PAX", d.pax, { onChange(d.copy(pax = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
-        TextFieldSmall("Payload", d.payload, { onChange(d.copy(payload = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("Fuel", d.fuel.orEmpty(), { onChange(d.copy(fuel = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("PAX", d.pax.orEmpty(), { onChange(d.copy(pax = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("Payload", d.payload.orEmpty(), { onChange(d.copy(payload = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("A. Time", d.airTime, { onChange(d.copy(airTime = it)) }, Modifier.weight(1f))
-        TextFieldSmall("B. Time", d.blockTime, { onChange(d.copy(blockTime = it)) }, Modifier.weight(1f))
-        TextFieldSmall("CI", d.costIndex, { onChange(d.copy(costIndex = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("A. Time", d.airTime.orEmpty(), { onChange(d.copy(airTime = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("B. Time", d.blockTime.orEmpty(), { onChange(d.copy(blockTime = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("CI", d.costIndex.orEmpty(), { onChange(d.copy(costIndex = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("R. Fuel", d.reserveFuel, { onChange(d.copy(reserveFuel = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
-        TextFieldSmall("ZFW", d.zfw, { onChange(d.copy(zfw = it)) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("R. Fuel", d.reserveFuel.orEmpty(), { onChange(d.copy(reserveFuel = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("ZFW", d.zfw.orEmpty(), { onChange(d.copy(zfw = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Crz. Wind", d.crzWind, { onChange(d.copy(crzWind = it)) }, Modifier.weight(1f))
-        TextFieldSmall("Crz. OAT", d.crzOat, { onChange(d.copy(crzOat = it)) }, Modifier.weight(1f))
+        TextFieldSmall("Crz. Wind", d.crzWind.orEmpty(), { onChange(d.copy(crzWind = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("Crz. OAT", d.crzOat.orEmpty(), { onChange(d.copy(crzOat = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
     }
 }
 
@@ -691,12 +733,12 @@ private fun NotesField(
 
 @Composable
 private fun AtcStrip(
-    info: String,
-    initAlt: String,
-    squawk: String,
-    onInfoChange: (String) -> Unit,
-    onInitAltChange: (String) -> Unit,
-    onSquawkChange: (String) -> Unit
+    info: String?,  // ← Change parameters to nullable
+    initAlt: String?,
+    squawk: String?,
+    onInfoChange: (String?) -> Unit,  // ← Change callbacks to accept nullable
+    onInitAltChange: (String?) -> Unit,
+    onSquawkChange: (String?) -> Unit
 ) {
     Surface(tonalElevation = 2.dp) {
         Row(
@@ -707,22 +749,22 @@ private fun AtcStrip(
         ) {
             TextFieldSmall(
                 label = "Info",
-                value = info,
-                onChange = onInfoChange,
+                value = info.orEmpty(),
+                onChange = { onInfoChange(it.takeIf { s -> s.isNotBlank() }) },
                 modifier = Modifier.weight(1f),
                 capitalization = KeyboardCapitalization.Characters
             )
             TextFieldSmall(
                 label = "Init. Alt.",
-                value = initAlt,
-                onChange = onInitAltChange,
+                value = initAlt.orEmpty(),
+                onChange = { onInitAltChange(it.takeIf { s -> s.isNotBlank() }) },
                 modifier = Modifier.weight(1f),
                 keyboardType = KeyboardType.Number
             )
             TextFieldSmall(
                 label = "Sqwk",
-                value = squawk,
-                onChange = onSquawkChange,
+                value = squawk.orEmpty(),
+                onChange = { onSquawkChange(it.takeIf { s -> s.isNotBlank() }) },
                 modifier = Modifier.weight(1f),
                 keyboardType = KeyboardType.Number
             )
@@ -731,8 +773,8 @@ private fun AtcStrip(
 }
 
 private fun FlightDraft.normalizedForDirtyCheck(): FlightDraft = copy(
-    route = route.trimEnd(),
-    scratchpad = scratchpad.trimEnd()
+    route = route?.trimEnd(),
+    scratchpad = scratchpad?.trimEnd()
 )
 
 

@@ -268,19 +268,19 @@ private fun FlightHistoryCard(
                 )
             }
 
-            if (f.flightNumber.isNotBlank()) {
+            if (!f.flightNumber.isNullOrBlank()) {
                 Text(text = f.flightNumber, style = MaterialTheme.typography.bodySmall)
             }
 
-            if (f.aircraft.isNotBlank()) {
+            if (!f.aircraft.isNullOrBlank()) {
                 Text(text = f.aircraft, style = MaterialTheme.typography.bodySmall)
             }
 
             val summary = buildString {
-                if (f.zfw.isNotBlank()) append("ZFW: ${f.zfw}  ")
-                if (f.fuel.isNotBlank()) append("Fuel: ${f.fuel}  ")
-                if (f.pax.isNotBlank()) append("PAX: ${f.pax}  ")
-                if (f.blockTime.isNotBlank()) append("Block: ${f.blockTime}")
+                if (!f.zfw.isNullOrBlank()) append("ZFW: ${f.zfw}  ")
+                if (!f.fuel.isNullOrBlank()) append("Fuel: ${f.fuel}  ")
+                if (!f.pax.isNullOrBlank()) append("PAX: ${f.pax}  ")
+                if (!f.blockTime.isNullOrBlank()) append("Block: ${f.blockTime}")
             }.trim()
 
             if (summary.isNotBlank()) {
@@ -294,7 +294,7 @@ private fun FlightHistoryCard(
  * Centralized matching logic so it's easy to evolve later (chips, advanced filters, etc.)
  */
 private fun FlightLogEntity.matches(q: String): Boolean {
-    fun String.m(): Boolean = this.isNotBlank() && this.lowercase().contains(q)
+    fun String?.m(): Boolean = !this.isNullOrBlank() && this.lowercase().contains(q)
 
     return dep.m() ||
             arr.m() ||
