@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
+import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.mappers.toDraft
 import com.fdv.fdvflightlogger.ui.theme.*
@@ -297,19 +298,22 @@ fun FlightLogScreen(
                 WindowWidthSizeClass.Expanded -> ExpandedWhiteboardLayout(
                     draft = draft,
                     onDraftChange = { draft = it },
-                    qnhUnit = state.settings.qnhUnit
+                    qnhUnit = state.settings.qnhUnit,
+                    tempUnit = state.settings.tempUnit
                 )
 
                 WindowWidthSizeClass.Medium -> MediumTwoColumnLayout(
                     draft = draft,
                     onDraftChange = { draft = it },
-                    qnhUnit = state.settings.qnhUnit
+                    qnhUnit = state.settings.qnhUnit,
+                    tempUnit = state.settings.tempUnit
                 )
 
                 else -> CompactSingleColumnLayout(
                     draft = draft,
                     onDraftChange = { draft = it },
-                    qnhUnit = state.settings.qnhUnit
+                    qnhUnit = state.settings.qnhUnit,
+                    tempUnit = state.settings.tempUnit
                 )
             }
 
@@ -331,7 +335,8 @@ fun FlightLogScreen(
 private fun CompactSingleColumnLayout(
     draft: FlightDraft,
     onDraftChange: (FlightDraft) -> Unit,
-    qnhUnit: QnhUnit
+    qnhUnit: QnhUnit,
+    tempUnit: TempUnit,
 ) {
     val scroll = rememberScrollState()
 
@@ -352,7 +357,7 @@ private fun CompactSingleColumnLayout(
         }
 
         SectionCard(title = "Aircraft + Performance") {
-            AircraftPerfFields(draft, onDraftChange)
+            AircraftPerfFields(draft, onDraftChange, tempUnit)
         }
 
         SectionCard(title = "Scratchpad") {
@@ -370,7 +375,8 @@ private fun CompactSingleColumnLayout(
 private fun MediumTwoColumnLayout(
     draft: FlightDraft,
     onDraftChange: (FlightDraft) -> Unit,
-    qnhUnit: QnhUnit
+    qnhUnit: QnhUnit,
+    tempUnit: TempUnit
 ) {
     val scroll = rememberScrollState()
 
@@ -398,7 +404,7 @@ private fun MediumTwoColumnLayout(
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionCard(title = "Aircraft + Performance") {
-                    AircraftPerfFields(draft, onDraftChange)
+                    AircraftPerfFields(draft, onDraftChange, tempUnit)
                 }
                 SectionCard(title = "Scratchpad") {
                     NotesField(
@@ -415,7 +421,8 @@ private fun MediumTwoColumnLayout(
 private fun ExpandedWhiteboardLayout(
     draft: FlightDraft,
     onDraftChange: (FlightDraft) -> Unit,
-    qnhUnit: QnhUnit
+    qnhUnit: QnhUnit,
+    tempUnit: TempUnit
 ) {
     val scroll = rememberScrollState()
 
@@ -452,7 +459,7 @@ private fun ExpandedWhiteboardLayout(
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionCard(title = "Aircraft + Performance") {
-                    AircraftPerfFields(draft, onDraftChange)
+                    AircraftPerfFields(draft, onDraftChange, tempUnit)
                 }
             }
         }
@@ -610,10 +617,22 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
 }
 
 @Composable
-private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) {
+private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, tempUnit: TempUnit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Flight #", d.flightNumber.orEmpty(), { onChange(d.copy(flightNumber = it.uppercase().takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
-        TextFieldSmall("Aircraft", d.aircraft.orEmpty(), { onChange(d.copy(aircraft = it.uppercase().takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
+        TextFieldSmall(
+            "Flight #",
+            d.flightNumber.orEmpty(),
+            { onChange(d.copy(flightNumber = it.uppercase().takeIf { s -> s.isNotBlank() })) },
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters
+        )
+        TextFieldSmall(
+            "Aircraft",
+            d.aircraft.orEmpty(),
+            { onChange(d.copy(aircraft = it.uppercase().takeIf { s -> s.isNotBlank() })) },
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters
+        )
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -709,17 +728,40 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) 
         TextFieldSmall(
             "Crz. Wind",
             d.crzWind.orEmpty(),
-            { onChange(d.copy(crzWind = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            {
+                val formatted = formatCrzWind(it)
+                onChange(d.copy(crzWind = formatted.takeIf { s -> s.isNotBlank() }))
+            },
             Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+            keyboardType = KeyboardType.Number
         )
-        TextFieldSmall(
-            "Crz. OAT",
-            d.crzOat.orEmpty(),
-            { onChange(d.copy(crzOat = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
-        )
+
+        // OAT field with unit label
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextFieldSmall(
+                "Crz. OAT",
+                d.crzOat.orEmpty(),
+                {
+                    val formatted = formatTemperature(it)
+                    onChange(d.copy(crzOat = formatted.takeIf { s -> s.isNotBlank() }))
+                },
+                Modifier.weight(1f),
+                keyboardType = KeyboardType.Number
+            )
+            Text(
+                text = when (tempUnit) {
+                    TempUnit.F -> "°F"
+                    TempUnit.C -> "°C"
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)  // Align with text field content
+            )
+        }
     }
 }
 
@@ -954,6 +996,8 @@ private fun AtcStrip(
     }
 }
 
+/* ----------------------------- Helpers ----------------------------- */
+
 private fun FlightDraft.isValid(): Boolean {
     return dep.isNotBlank() &&
             dep.length <= 4 &&
@@ -1026,6 +1070,75 @@ private fun formatQnh(input: String, unit: QnhUnit): String {
             // Format as xxxx (integers only, max 4 digits: 1013)
             digitsOnly.filter { it.isDigit() }.take(4)
         }
+    }
+}
+
+/**
+ * Formats cruise wind as XXX/XX
+ * Direction: 3 digits (000-360, leading zeros shown)
+ * Speed: 2-3 digits (no leading zero, e.g., 25 not 025)
+ * Examples: 096/25, 270/15, 360/100
+ */
+private fun formatCrzWind(input: String): String {
+    // Remove everything except digits and slash
+    val cleaned = input.filter { it.isDigit() || it == '/' }
+
+    // Split by slash
+    val parts = cleaned.split('/')
+
+    return when {
+        // No slash yet - just typing direction
+        parts.size == 1 -> {
+            val direction = parts[0].take(3)
+            if (cleaned.endsWith('/')) {
+                "$direction/"
+            } else {
+                direction
+            }
+        }
+        // Has slash - format both parts
+        parts.size >= 2 -> {
+            val direction = parts[0].take(3).padStart(3, '0')  // Always 3 digits with leading zeros
+            val speed = parts[1].take(3).trimStart('0').ifEmpty { "0" }  // Remove leading zeros, max 3 digits
+            "$direction/$speed"
+        }
+        else -> cleaned
+    }
+}
+
+/**
+ * Formats temperature as integer with optional minus sign
+ * Rounds decimals (e.g., -15.7 → -16, 15.3 → 15)
+ * Examples: -15, 0, 23
+ */
+private fun formatTemperature(input: String): String {
+    // Allow digits, minus sign, and decimal point (for intermediate input)
+    val cleaned = input.filter { it.isDigit() || it == '-' || it == '.' }
+
+    // If empty or just a minus sign, return as-is
+    if (cleaned.isEmpty() || cleaned == "-") return cleaned
+
+    // Try to parse and round
+    return try {
+        val value = cleaned.toDouble()
+        value.toInt().toString()  // Rounds toward zero by default
+    } catch (e: NumberFormatException) {
+        // If parsing fails (e.g., incomplete input like "1-"), return cleaned digits
+        cleaned.filter { it.isDigit() || it == '-' }.take(4)  // Max -999 to 999
+    }
+}
+
+/**
+ * Appends temperature unit symbol based on settings
+ */
+private fun appendTempUnit(value: String, unit: TempUnit): String {
+    return if (value.isNotBlank()) {
+        when (unit) {
+            TempUnit.F -> "${value}°F"
+            TempUnit.C -> "${value}°C"
+        }
+    } else {
+        value
     }
 }
 
