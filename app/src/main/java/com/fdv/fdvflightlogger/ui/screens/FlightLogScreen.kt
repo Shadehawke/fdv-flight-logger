@@ -65,6 +65,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.mappers.toDraft
 import com.fdv.fdvflightlogger.ui.theme.*
@@ -295,17 +296,20 @@ fun FlightLogScreen(
             when (widthClass) {
                 WindowWidthSizeClass.Expanded -> ExpandedWhiteboardLayout(
                     draft = draft,
-                    onDraftChange = { draft = it }
+                    onDraftChange = { draft = it },
+                    qnhUnit = state.settings.qnhUnit
                 )
 
                 WindowWidthSizeClass.Medium -> MediumTwoColumnLayout(
                     draft = draft,
-                    onDraftChange = { draft = it }
+                    onDraftChange = { draft = it },
+                    qnhUnit = state.settings.qnhUnit
                 )
 
                 else -> CompactSingleColumnLayout(
                     draft = draft,
-                    onDraftChange = { draft = it }
+                    onDraftChange = { draft = it },
+                    qnhUnit = state.settings.qnhUnit
                 )
             }
 
@@ -326,7 +330,8 @@ fun FlightLogScreen(
 @Composable
 private fun CompactSingleColumnLayout(
     draft: FlightDraft,
-    onDraftChange: (FlightDraft) -> Unit
+    onDraftChange: (FlightDraft) -> Unit,
+    qnhUnit: QnhUnit
 ) {
     val scroll = rememberScrollState()
 
@@ -343,7 +348,7 @@ private fun CompactSingleColumnLayout(
         }
 
         SectionCard(title = "Arrival") {
-            ArrivalFields(draft, onDraftChange)
+            ArrivalFields(draft, onDraftChange, qnhUnit)
         }
 
         SectionCard(title = "Aircraft + Performance") {
@@ -364,7 +369,8 @@ private fun CompactSingleColumnLayout(
 @Composable
 private fun MediumTwoColumnLayout(
     draft: FlightDraft,
-    onDraftChange: (FlightDraft) -> Unit
+    onDraftChange: (FlightDraft) -> Unit,
+    qnhUnit: QnhUnit
 ) {
     val scroll = rememberScrollState()
 
@@ -386,7 +392,7 @@ private fun MediumTwoColumnLayout(
                     DepartureEnrouteFields(draft, onDraftChange)
                 }
                 SectionCard(title = "Arrival") {
-                    ArrivalFields(draft, onDraftChange)
+                    ArrivalFields(draft, onDraftChange, qnhUnit)
                 }
             }
 
@@ -408,7 +414,8 @@ private fun MediumTwoColumnLayout(
 @Composable
 private fun ExpandedWhiteboardLayout(
     draft: FlightDraft,
-    onDraftChange: (FlightDraft) -> Unit
+    onDraftChange: (FlightDraft) -> Unit,
+    qnhUnit: QnhUnit
 ) {
     val scroll = rememberScrollState()
 
@@ -433,7 +440,7 @@ private fun ExpandedWhiteboardLayout(
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionCard(title = "Arrival") {
-                    ArrivalFields(draft, onDraftChange)
+                    ArrivalFields(draft, onDraftChange, qnhUnit)
                 }
                 SectionCard(title = "Scratchpad") {
                     NotesField(
@@ -546,7 +553,7 @@ private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -
 }
 
 @Composable
-private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) {
+private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUnit: QnhUnit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextFieldSmall(
             "RWY",
@@ -583,8 +590,8 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) {
             "QNH",
             d.qnh.orEmpty(),
             {
-                val validated = validateNumeric(it, allowDecimal = true)
-                onChange(d.copy(qnh = validated.takeIf { s -> s.isNotBlank() }))
+                val formatted = formatQnh(it, qnhUnit)
+                onChange(d.copy(qnh = formatted.takeIf { s -> s.isNotBlank() }))
             },
             Modifier.weight(1f),
             keyboardType = KeyboardType.Decimal
@@ -989,6 +996,36 @@ private fun formatTime(input: String): String {
         digitsOnly.isEmpty() -> ""
         digitsOnly.length <= 2 -> digitsOnly
         else -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2).take(2)}"
+    }
+}
+
+/**
+ * Formats QNH based on unit setting
+ * inHg: xx.xx (e.g., 29.92)
+ * hPa: xxxx (e.g., 1013)
+ */
+private fun formatQnh(input: String, unit: QnhUnit): String {
+    val digitsOnly = input.filter { it.isDigit() || it == '.' }
+
+    return when (unit) {
+        QnhUnit.INHG -> {
+            // Format as xx.xx (max 5 chars: 29.92)
+            val parts = digitsOnly.split('.')
+            val whole = parts[0].take(2)
+            val decimal = parts.getOrNull(1)?.take(2) ?: ""
+
+            if (decimal.isEmpty() && whole.isNotEmpty() && digitsOnly.contains('.')) {
+                "$whole."
+            } else if (decimal.isNotEmpty()) {
+                "$whole.$decimal"
+            } else {
+                whole
+            }
+        }
+        QnhUnit.HPA -> {
+            // Format as xxxx (integers only, max 4 digits: 1013)
+            digitsOnly.filter { it.isDigit() }.take(4)
+        }
     }
 }
 
