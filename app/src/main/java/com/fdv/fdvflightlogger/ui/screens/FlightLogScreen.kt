@@ -44,9 +44,11 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -282,7 +284,7 @@ fun FlightLogScreen(
                         initialDraft = blank
                     }
                 },
-                enabled = draft.dep.isNotBlank() && draft.arr.isNotBlank(),
+                enabled = draft.isValid(),
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
@@ -591,7 +593,9 @@ private fun SectionJumpChips(jumpToSection: (String) -> Unit) {
             AssistChip(onClick = { jumpToSection("notes") }, label = { Text("Notes") })
         }
 
-        val canScrollMore = scroll.value < scroll.maxValue
+        val canScrollMore = remember {
+            derivedStateOf { scroll.value < scroll.maxValue }
+        }.value
         if (canScrollMore) {
             RightEdgeFadeWithChevron(modifier = Modifier.align(Alignment.CenterEnd))
         }
@@ -770,6 +774,13 @@ private fun AtcStrip(
             )
         }
     }
+}
+
+private fun FlightDraft.isValid(): Boolean {
+    return dep.isNotBlank() &&
+            dep.length <= 4 &&
+            arr.isNotBlank() &&
+            arr.length <= 4
 }
 
 private fun FlightDraft.normalizedForDirtyCheck(): FlightDraft = copy(
