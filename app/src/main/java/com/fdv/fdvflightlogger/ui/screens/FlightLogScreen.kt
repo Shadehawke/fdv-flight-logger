@@ -483,9 +483,27 @@ private fun RouteHeader(
 @Composable
 private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("RWY", draft.depRwy.orEmpty(), { onChange(draft.copy(depRwy = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
-        TextFieldSmall("Gate", draft.depGate.orEmpty(), { onChange(draft.copy(depGate = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
-        TextFieldSmall("SID", draft.sid.orEmpty(), { onChange(draft.copy(sid = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall(
+            "RWY",
+            draft.depRwy.orEmpty(),
+            { onChange(draft.copy(depRwy = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
+        TextFieldSmall(
+            "Gate",
+            draft.depGate.orEmpty(),
+            { onChange(draft.copy(depGate = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
+        TextFieldSmall(
+            "SID",
+            draft.sid.orEmpty(),
+            { onChange(draft.copy(sid = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -496,21 +514,39 @@ private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -
 
     RouteTextField(
         value = draft.route.orEmpty(),
-        onChange = { onChange(draft.copy(route = it.takeIf { s -> s.isNotBlank() })) }
+        onChange = { onChange(draft.copy(route = it.uppercase().takeIf { s -> s.isNotBlank() })) }  // ← Add .uppercase()
     )
 }
 
 @Composable
 private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("RWY", d.arrRwy.orEmpty(), { onChange(d.copy(arrRwy = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
-        TextFieldSmall("Gate", d.arrGate.orEmpty(), { onChange(d.copy(arrGate = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
-        TextFieldSmall("STAR", d.star.orEmpty(), { onChange(d.copy(star = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall(
+            "RWY",
+            d.arrRwy.orEmpty(),
+            { onChange(d.copy(arrRwy = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
+        TextFieldSmall(
+            "Gate",
+            d.arrGate.orEmpty(),
+            { onChange(d.copy(arrGate = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
+        TextFieldSmall(
+            "STAR",
+            d.star.orEmpty(),
+            { onChange(d.copy(star = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextFieldSmall("ALTN", d.altn.orEmpty(), { onChange(d.copy(altn = it.uppercase().takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
-        TextFieldSmall("QNH", d.qnh.orEmpty(), { onChange(d.copy(qnh = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall("QNH", d.qnh.orEmpty(), { onChange(d.copy(qnh = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))  // ← No change (numeric)
         TextFieldSmall("Vref", d.vref.orEmpty(), { onChange(d.copy(vref = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 }
@@ -523,14 +559,26 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) 
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Fuel", d.fuel.orEmpty(), { onChange(d.copy(fuel = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall("Fuel", d.fuel.orEmpty(), { onChange(d.copy(fuel = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)  // ← No change (numeric)
         TextFieldSmall("PAX", d.pax.orEmpty(), { onChange(d.copy(pax = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
         TextFieldSmall("Payload", d.payload.orEmpty(), { onChange(d.copy(payload = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("A. Time", d.airTime.orEmpty(), { onChange(d.copy(airTime = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
-        TextFieldSmall("B. Time", d.blockTime.orEmpty(), { onChange(d.copy(blockTime = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall(
+            "A. Time",
+            d.airTime.orEmpty(),
+            { onChange(d.copy(airTime = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase() (temporary, will format HH:MM later)
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
+        TextFieldSmall(
+            "B. Time",
+            d.blockTime.orEmpty(),
+            { onChange(d.copy(blockTime = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase() (temporary)
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
         TextFieldSmall("CI", d.costIndex.orEmpty(), { onChange(d.copy(costIndex = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
     }
 
@@ -540,8 +588,20 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) 
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Crz. Wind", d.crzWind.orEmpty(), { onChange(d.copy(crzWind = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
-        TextFieldSmall("Crz. OAT", d.crzOat.orEmpty(), { onChange(d.copy(crzOat = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
+        TextFieldSmall(
+            "Crz. Wind",
+            d.crzWind.orEmpty(),
+            { onChange(d.copy(crzWind = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
+        TextFieldSmall(
+            "Crz. OAT",
+            d.crzOat.orEmpty(),
+            { onChange(d.copy(crzOat = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        )
     }
 }
 
