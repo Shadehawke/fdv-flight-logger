@@ -507,9 +507,36 @@ private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Cruise (FL)", draft.cruiseFl.orEmpty(), { onChange(draft.copy(cruiseFl = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
-        TextFieldSmall("Flaps", draft.depFlaps.orEmpty(), { onChange(draft.copy(depFlaps = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))
-        TextFieldSmall("V2", draft.v2.orEmpty(), { onChange(draft.copy(v2 = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall(
+            "Cruise (FL)",
+            draft.cruiseFl.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = false)
+                onChange(draft.copy(cruiseFl = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Number
+        )
+        TextFieldSmall(
+            "Flaps",
+            draft.depFlaps.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = false)
+                onChange(draft.copy(depFlaps = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Number
+        )
+        TextFieldSmall(
+            "V2",
+            draft.v2.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = false)
+                onChange(draft.copy(v2 = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Number
+        )
     }
 
     RouteTextField(
@@ -545,9 +572,33 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) {
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("ALTN", d.altn.orEmpty(), { onChange(d.copy(altn = it.uppercase().takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), capitalization = KeyboardCapitalization.Characters)
-        TextFieldSmall("QNH", d.qnh.orEmpty(), { onChange(d.copy(qnh = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f))  // ← No change (numeric)
-        TextFieldSmall("Vref", d.vref.orEmpty(), { onChange(d.copy(vref = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall(
+            "ALTN",
+            d.altn.orEmpty(),
+            { onChange(d.copy(altn = it.uppercase().takeIf { s -> s.isNotBlank() })) },
+            Modifier.weight(1f),
+            capitalization = KeyboardCapitalization.Characters
+        )
+        TextFieldSmall(
+            "QNH",
+            d.qnh.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = true)
+                onChange(d.copy(qnh = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Decimal
+        )
+        TextFieldSmall(
+            "Vref",
+            d.vref.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = false)
+                onChange(d.copy(vref = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Number
+        )
     }
 }
 
@@ -559,32 +610,92 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit) 
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("Fuel", d.fuel.orEmpty(), { onChange(d.copy(fuel = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)  // ← No change (numeric)
-        TextFieldSmall("PAX", d.pax.orEmpty(), { onChange(d.copy(pax = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
-        TextFieldSmall("Payload", d.payload.orEmpty(), { onChange(d.copy(payload = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall(
+            "Fuel",
+            d.fuel.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = true)
+                onChange(d.copy(fuel = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Decimal
+        )
+        TextFieldSmall(
+            "PAX",
+            d.pax.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = false)
+                onChange(d.copy(pax = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Number
+        )
+        TextFieldSmall(
+            "Payload",
+            d.payload.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = true)
+                onChange(d.copy(payload = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Decimal
+        )
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextFieldSmall(
             "A. Time",
             d.airTime.orEmpty(),
-            { onChange(d.copy(airTime = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase() (temporary, will format HH:MM later)
+            {
+                val formatted = formatTime(it)
+                onChange(d.copy(airTime = formatted.takeIf { s -> s.isNotBlank() }))
+            },
             Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+            keyboardType = KeyboardType.Number
         )
         TextFieldSmall(
             "B. Time",
             d.blockTime.orEmpty(),
-            { onChange(d.copy(blockTime = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase() (temporary)
+            {
+                val formatted = formatTime(it)
+                onChange(d.copy(blockTime = formatted.takeIf { s -> s.isNotBlank() }))
+            },
             Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+            keyboardType = KeyboardType.Number
         )
-        TextFieldSmall("CI", d.costIndex.orEmpty(), { onChange(d.copy(costIndex = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall(
+            "CI",
+            d.costIndex.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = false)
+                onChange(d.copy(costIndex = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Number
+        )
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall("R. Fuel", d.reserveFuel.orEmpty(), { onChange(d.copy(reserveFuel = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
-        TextFieldSmall("ZFW", d.zfw.orEmpty(), { onChange(d.copy(zfw = it.takeIf { s -> s.isNotBlank() })) }, Modifier.weight(1f), keyboardType = KeyboardType.Number)
+        TextFieldSmall(
+            "R. Fuel",
+            d.reserveFuel.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = true)
+                onChange(d.copy(reserveFuel = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Decimal
+        )
+        TextFieldSmall(
+            "ZFW",
+            d.zfw.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = true)
+                onChange(d.copy(zfw = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Decimal
+        )
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -847,5 +958,38 @@ private fun FlightDraft.normalizedForDirtyCheck(): FlightDraft = copy(
     route = route?.trimEnd(),
     scratchpad = scratchpad?.trimEnd()
 )
+
+/**
+ * Validates numeric input (allows digits and optional decimal point)
+ */
+private fun validateNumeric(input: String, allowDecimal: Boolean = false): String {
+    return if (allowDecimal) {
+        input.filter { it.isDigit() || it == '.' }
+            .let {
+                // Ensure only one decimal point
+                val parts = it.split('.')
+                if (parts.size > 2) parts[0] + "." + parts.drop(1).joinToString("")
+                else it
+            }
+    } else {
+        input.filter { it.isDigit() }
+    }
+}
+
+/**
+ * Formats time input as HH:MM
+ * Allows: digits and colon
+ * Auto-inserts colon after 2 digits
+ */
+private fun formatTime(input: String): String {
+    // Remove everything except digits
+    val digitsOnly = input.filter { it.isDigit() }
+
+    return when {
+        digitsOnly.isEmpty() -> ""
+        digitsOnly.length <= 2 -> digitsOnly
+        else -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2).take(2)}"
+    }
+}
 
 
