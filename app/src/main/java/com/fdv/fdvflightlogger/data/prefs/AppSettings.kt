@@ -10,7 +10,8 @@ data class AppSettings(
     val weightUnit: WeightUnit = WeightUnit.LB,
     val fuelUnit: WeightUnit = WeightUnit.LB, // Fuel logged as lb/kg for MVP
     val qnhUnit: QnhUnit = QnhUnit.INHG,
-    val tempUnit: TempUnit = TempUnit.F
+    val tempUnit: TempUnit = TempUnit.F,
+    val keepScreenOn: Boolean = false
 )
 
 data class PilotProfile(

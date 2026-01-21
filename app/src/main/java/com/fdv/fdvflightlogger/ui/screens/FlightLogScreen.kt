@@ -45,6 +45,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +71,7 @@ import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.mappers.toDraft
 import com.fdv.fdvflightlogger.ui.theme.*
+import kotlinx.coroutines.delay
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -205,6 +207,24 @@ fun FlightLogScreen(
 
     BackHandler(enabled = isDirty) {
         confirmDiscard.value = true
+    }
+
+    LaunchedEffect(isDirty) {
+        while (isDirty) {
+            delay(60000)
+            if (draft.dep.isNotBlank() && draft.arr.isNotBlank()) {
+                appViewModel.saveFlight(draft)
+                initialDraft = draft
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isDirty && draft.dep.isNotBlank() && draft.arr.isNotBlank()) {
+                appViewModel.saveFlight(draft)
+            }
+        }
     }
 
     if (confirmDiscard.value) {
@@ -1122,24 +1142,10 @@ private fun formatTemperature(input: String): String {
     return try {
         val value = cleaned.toDouble()
         value.toInt().toString()  // Rounds toward zero by default
-    } catch (e: NumberFormatException) {
-        // If parsing fails (e.g., incomplete input like "1-"), return cleaned digits
-        cleaned.filter { it.isDigit() || it == '-' }.take(4)  // Max -999 to 999
+    } catch (_: NumberFormatException) {
+        cleaned.filter { it.isDigit() || it == '-' }.take(4)
     }
 }
 
-/**
- * Appends temperature unit symbol based on settings
- */
-private fun appendTempUnit(value: String, unit: TempUnit): String {
-    return if (value.isNotBlank()) {
-        when (unit) {
-            TempUnit.F -> "${value}°F"
-            TempUnit.C -> "${value}°C"
-        }
-    } else {
-        value
-    }
-}
 
 

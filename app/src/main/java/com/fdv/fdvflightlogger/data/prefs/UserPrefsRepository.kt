@@ -1,6 +1,7 @@
 package com.fdv.fdvflightlogger.data.prefs
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -21,6 +22,7 @@ class UserPrefsRepository(private val context: Context) {
         val FUEL_UNIT = stringPreferencesKey("fuel_unit")
         val QNH_UNIT = stringPreferencesKey("qnh_unit")
         val TEMP_UNIT = stringPreferencesKey("temp_unit")
+        val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
 
         val LAST_LANDED = stringPreferencesKey("last_landed")
     }
@@ -41,7 +43,8 @@ class UserPrefsRepository(private val context: Context) {
                 weightUnit = prefs[Keys.WEIGHT_UNIT].asEnumOrDefault(WeightUnit.LB),
                 fuelUnit = prefs[Keys.FUEL_UNIT].asEnumOrDefault(WeightUnit.LB),
                 qnhUnit = prefs[Keys.QNH_UNIT].asEnumOrDefault(QnhUnit.INHG),
-                tempUnit = prefs[Keys.TEMP_UNIT].asEnumOrDefault(TempUnit.F)
+                tempUnit = prefs[Keys.TEMP_UNIT].asEnumOrDefault(TempUnit.F),
+                keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: false
             )
         }
 
@@ -63,15 +66,9 @@ class UserPrefsRepository(private val context: Context) {
             prefs[Keys.FUEL_UNIT] = settings.fuelUnit.name
             prefs[Keys.QNH_UNIT] = settings.qnhUnit.name
             prefs[Keys.TEMP_UNIT] = settings.tempUnit.name
+            prefs[Keys.KEEP_SCREEN_ON] = settings.keepScreenOn
         }
     }
-
-    suspend fun setThemeMode(mode: ThemeMode) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.THEME_MODE] = mode.name
-        }
-    }
-
 
     suspend fun setLastLanded(airport: String) {
         context.dataStore.edit { prefs ->

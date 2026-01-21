@@ -1,6 +1,7 @@
 package com.fdv.fdvflightlogger
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -30,6 +31,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val state = appViewModel.state.collectAsStateWithLifecycle().value
+
+            LaunchedEffect(state.settings.keepScreenOn) {
+                if (state.settings.keepScreenOn) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+            }
 
             FDVFlightLoggerTheme(
                 themeMode = state.settings.themeMode
