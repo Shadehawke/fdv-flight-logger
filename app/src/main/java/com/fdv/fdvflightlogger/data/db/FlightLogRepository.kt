@@ -23,12 +23,16 @@ class FlightLogRepository(context: Context) {
             depFlaps = draft.depFlaps,
             v2 = draft.v2,
             route = draft.route,
+            depQnh = draft.depQnh,
+
             arrRwy = draft.arrRwy,
             arrGate = draft.arrGate,
             star = draft.star,
             altn = draft.altn,
             qnh = draft.qnh,
             vref = draft.vref,
+            arrFlaps = draft.arrFlaps,
+
             flightNumber = draft.flightNumber,
             aircraft = draft.aircraft,
             fuel = draft.fuel,

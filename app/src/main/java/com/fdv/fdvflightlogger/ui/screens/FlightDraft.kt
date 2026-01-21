@@ -3,11 +3,9 @@ package com.fdv.fdvflightlogger.ui.screens
 data class FlightDraft(
     val id: Long? = null,
 
-    // Required fields
     val dep: String = "",
     val arr: String = "",
 
-    // Optional fields (make nullable)
     val depRwy: String? = null,
     val depGate: String? = null,
     val sid: String? = null,
@@ -15,6 +13,7 @@ data class FlightDraft(
     val depFlaps: String? = null,
     val v2: String? = null,
     val route: String? = null,
+    val depQnh: String? = null,
 
     val arrRwy: String? = null,
     val arrGate: String? = null,
@@ -22,6 +21,7 @@ data class FlightDraft(
     val altn: String? = null,
     val qnh: String? = null,
     val vref: String? = null,
+    val arrFlaps: String? = null,
 
     val flightNumber: String? = null,
     val aircraft: String? = null,

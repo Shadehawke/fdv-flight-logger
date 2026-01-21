@@ -178,11 +178,13 @@ private fun FlightDetailContent(
             ReadRow("RWY", flight.depRwy.orEmpty(), "Gate", flight.depGate.orEmpty(), "SID", flight.sid.orEmpty())
             ReadRow("Cruise (FL)", flight.cruiseFl.orEmpty(), "Flaps", flight.depFlaps.orEmpty(), "V2", flight.v2.orEmpty())
             ReadBlock("Route", flight.route.orEmpty())
+            ReadRow("Dep QNH", flight.depQnh.orEmpty(), "", "", "", "")
         }
 
         SectionCard("Arrival") {
             ReadRow("RWY", flight.arrRwy.orEmpty(), "Gate", flight.arrGate.orEmpty(), "STAR", flight.star.orEmpty())
-            ReadRow("ALTN", flight.altn.orEmpty(), "QNH", flight.qnh.orEmpty(), "Vref", flight.vref.orEmpty())
+            ReadRow("ALTN", flight.altn.orEmpty(), "QNH", flight.qnh.orEmpty(), "Arr Flaps", flight.arrFlaps.orEmpty())
+            ReadRow("Vref", flight.vref.orEmpty(), "", "", "", "")
         }
 
         SectionCard("Aircraft + Performance") {

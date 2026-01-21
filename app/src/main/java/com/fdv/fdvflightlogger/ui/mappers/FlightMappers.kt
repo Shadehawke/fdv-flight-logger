@@ -14,12 +14,16 @@ fun FlightLogEntity.toDraft(): FlightDraft = FlightDraft(
     depFlaps = depFlaps,
     v2 = v2,
     route = route,
+    depQnh = depQnh,
+
     arrRwy = arrRwy,
     arrGate = arrGate,
     star = star,
     altn = altn,
     qnh = qnh,
     vref = vref,
+    arrFlaps = arrFlaps,
+
     flightNumber = flightNumber,
     aircraft = aircraft,
     fuel = fuel,

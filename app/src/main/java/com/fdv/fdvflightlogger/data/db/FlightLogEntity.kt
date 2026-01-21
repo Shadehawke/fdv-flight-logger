@@ -8,11 +8,9 @@ data class FlightLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val createdAtEpochMs: Long = System.currentTimeMillis(),
 
-    // Required fields (non-nullable)
     val dep: String,
     val arr: String,
 
-    // Optional departure fields (nullable with defaults)
     val depRwy: String? = null,
     val depGate: String? = null,
     val sid: String? = null,
@@ -20,16 +18,16 @@ data class FlightLogEntity(
     val depFlaps: String? = null,
     val v2: String? = null,
     val route: String? = null,
+    val depQnh: String? = null,
 
-    // Optional arrival fields
     val arrRwy: String? = null,
     val arrGate: String? = null,
     val star: String? = null,
     val altn: String? = null,
     val qnh: String? = null,
     val vref: String? = null,
+    val arrFlaps: String? = null,
 
-    // Optional flight info
     val flightNumber: String? = null,
     val aircraft: String? = null,
     val fuel: String? = null,
@@ -43,11 +41,9 @@ data class FlightLogEntity(
     val crzWind: String? = null,
     val crzOat: String? = null,
 
-    // Optional ATC fields
     val info: String? = null,
     val initAlt: String? = null,
     val squawk: String? = null,
 
-    // Optional notes
     val scratchpad: String? = null
 )

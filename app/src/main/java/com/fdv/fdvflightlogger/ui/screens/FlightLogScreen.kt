@@ -101,12 +101,16 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             d.depFlaps ?: "",
             d.v2 ?: "",
             d.route ?: "",
+            d.depQnh ?: "",
+
             d.arrRwy ?: "",
             d.arrGate ?: "",
             d.star ?: "",
             d.altn ?: "",
             d.qnh ?: "",
             d.vref ?: "",
+            d.arrFlaps ?: "",
+
             d.flightNumber ?: "",
             d.aircraft ?: "",
             d.fuel ?: "",
@@ -139,28 +143,34 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             depFlaps = (v[7] as? String)?.takeIf { it.isNotBlank() },
             v2 = (v[8] as? String)?.takeIf { it.isNotBlank() },
             route = (v[9] as? String)?.takeIf { it.isNotBlank() },
-            arrRwy = (v[10] as? String)?.takeIf { it.isNotBlank() },
-            arrGate = (v[11] as? String)?.takeIf { it.isNotBlank() },
-            star = (v[12] as? String)?.takeIf { it.isNotBlank() },
-            altn = (v[13] as? String)?.takeIf { it.isNotBlank() },
-            qnh = (v[14] as? String)?.takeIf { it.isNotBlank() },
-            vref = (v[15] as? String)?.takeIf { it.isNotBlank() },
-            flightNumber = (v[16] as? String)?.takeIf { it.isNotBlank() },
-            aircraft = (v[17] as? String)?.takeIf { it.isNotBlank() },
-            fuel = (v[18] as? String)?.takeIf { it.isNotBlank() },
-            pax = (v[19] as? String)?.takeIf { it.isNotBlank() },
-            payload = (v[20] as? String)?.takeIf { it.isNotBlank() },
-            airTime = (v[21] as? String)?.takeIf { it.isNotBlank() },
-            blockTime = (v[22] as? String)?.takeIf { it.isNotBlank() },
-            costIndex = (v[23] as? String)?.takeIf { it.isNotBlank() },
-            reserveFuel = (v[24] as? String)?.takeIf { it.isNotBlank() },
-            zfw = (v[25] as? String)?.takeIf { it.isNotBlank() },
-            crzWind = (v[26] as? String)?.takeIf { it.isNotBlank() },
-            crzOat = (v[27] as? String)?.takeIf { it.isNotBlank() },
-            info = (v[28] as? String)?.takeIf { it.isNotBlank() },
-            initAlt = (v[29] as? String)?.takeIf { it.isNotBlank() },
-            squawk = (v[30] as? String)?.takeIf { it.isNotBlank() },
-            scratchpad = (v[31] as? String)?.takeIf { it.isNotBlank() }
+            depQnh = (v[10] as? String)?.takeIf { it.isNotBlank() },
+
+            arrRwy = (v[11] as? String)?.takeIf { it.isNotBlank() },
+            arrGate = (v[12] as? String)?.takeIf { it.isNotBlank() },
+            star = (v[13] as? String)?.takeIf { it.isNotBlank() },
+            altn = (v[14] as? String)?.takeIf { it.isNotBlank() },
+            qnh = (v[15] as? String)?.takeIf { it.isNotBlank() },
+            vref = (v[16] as? String)?.takeIf { it.isNotBlank() },
+            arrFlaps = (v[17] as? String)?.takeIf { it.isNotBlank() },
+
+            flightNumber = (v[18] as? String)?.takeIf { it.isNotBlank() },
+            aircraft = (v[19] as? String)?.takeIf { it.isNotBlank() },
+            fuel = (v[20] as? String)?.takeIf { it.isNotBlank() },
+            pax = (v[21] as? String)?.takeIf { it.isNotBlank() },
+            payload = (v[22] as? String)?.takeIf { it.isNotBlank() },
+            airTime = (v[23] as? String)?.takeIf { it.isNotBlank() },
+            blockTime = (v[24] as? String)?.takeIf { it.isNotBlank() },
+            costIndex = (v[25] as? String)?.takeIf { it.isNotBlank() },
+            reserveFuel = (v[26] as? String)?.takeIf { it.isNotBlank() },
+            zfw = (v[27] as? String)?.takeIf { it.isNotBlank() },
+            crzWind = (v[28] as? String)?.takeIf { it.isNotBlank() },
+            crzOat = (v[29] as? String)?.takeIf { it.isNotBlank() },
+
+            info = (v[30] as? String)?.takeIf { it.isNotBlank() },
+            initAlt = (v[31] as? String)?.takeIf { it.isNotBlank() },
+            squawk = (v[32] as? String)?.takeIf { it.isNotBlank() },
+
+            scratchpad = (v[33] as? String)?.takeIf { it.isNotBlank() }
         )
     }
 )
@@ -369,7 +379,7 @@ private fun CompactSingleColumnLayout(
         RouteHeader(draft, onDraftChange)
 
         SectionCard(title = "Departure + Enroute") {
-            DepartureEnrouteFields(draft, onDraftChange)
+            DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
         }
 
         SectionCard(title = "Arrival") {
@@ -415,7 +425,7 @@ private fun MediumTwoColumnLayout(
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionCard(title = "Departure + Enroute") {
-                    DepartureEnrouteFields(draft, onDraftChange)
+                    DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
                 }
                 SectionCard(title = "Arrival") {
                     ArrivalFields(draft, onDraftChange, qnhUnit)
@@ -461,7 +471,7 @@ private fun ExpandedWhiteboardLayout(
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionCard(title = "Departure + Enroute") {
-                    DepartureEnrouteFields(draft, onDraftChange)
+                    DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
                 }
             }
 
@@ -515,7 +525,7 @@ private fun RouteHeader(
 }
 
 @Composable
-private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -> Unit) {
+private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUnit: QnhUnit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextFieldSmall(
             "RWY",
@@ -577,6 +587,17 @@ private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -
         value = draft.route.orEmpty(),
         onChange = { onChange(draft.copy(route = it.uppercase().takeIf { s -> s.isNotBlank() })) }  // ← Add .uppercase()
     )
+
+    TextFieldSmall(
+        "Dep QNH",
+        draft.depQnh.orEmpty(),
+        {
+            val formatted = formatQnh(it, qnhUnit)
+            onChange(draft.copy(depQnh = formatted.takeIf { s -> s.isNotBlank() }))
+        },
+        Modifier.fillMaxWidth(),
+        keyboardType = KeyboardType.Decimal
+    )
 }
 
 @Composable
@@ -624,6 +645,19 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
             keyboardType = KeyboardType.Decimal
         )
         TextFieldSmall(
+            "Arr Flaps",
+            d.arrFlaps.orEmpty(),
+            {
+                val validated = validateNumeric(it, allowDecimal = false)
+                onChange(d.copy(arrFlaps = validated.takeIf { s -> s.isNotBlank() }))
+            },
+            Modifier.weight(1f),
+            keyboardType = KeyboardType.Number
+        )
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        TextFieldSmall(
             "Vref",
             d.vref.orEmpty(),
             {
@@ -633,6 +667,7 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
             Modifier.weight(1f),
             keyboardType = KeyboardType.Number
         )
+        Spacer(Modifier.weight(2f))
     }
 }
 
