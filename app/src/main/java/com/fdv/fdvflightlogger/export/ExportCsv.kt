@@ -12,8 +12,10 @@ object ExportCsv {
         "DEP","ARR",
         "DepRWY","DepGate","SID",
         "CruiseFL","DepFlaps","V2","Route",
+        "DepQNH",
         "ArrRWY","ArrGate","STAR",
         "ALTN","QNH","Vref",
+        "ArrFlaps",
         "Fuel","PAX","Payload",
         "AirTime","BlockTime","CostIndex",
         "ReserveFuel","ZFW",
@@ -34,8 +36,10 @@ object ExportCsv {
                 f.dep, f.arr,
                 f.depRwy, f.depGate, f.sid,
                 f.cruiseFl, f.depFlaps, f.v2, f.route,
+                f.depQnh,
                 f.arrRwy, f.arrGate, f.star,
                 f.altn, f.qnh, f.vref,
+                f.arrFlaps,
                 f.fuel, f.pax, f.payload,
                 f.airTime, f.blockTime, f.costIndex,
                 f.reserveFuel, f.zfw,
@@ -50,7 +54,6 @@ object ExportCsv {
         return sb.toString()
     }
 
-    // RFC4180-ish escaping: quote if needed and escape quotes
     private fun csvEscape(value: String?): String {
         val v = (value ?: "")
         val needsQuotes = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r")
