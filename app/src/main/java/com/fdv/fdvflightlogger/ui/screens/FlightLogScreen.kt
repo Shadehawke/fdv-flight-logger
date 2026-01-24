@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.fdv.fdvflightlogger.ui.screens
 
 import android.app.Activity
@@ -63,6 +65,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -724,25 +728,17 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall(
+        TimeField(
             "A. Time",
             d.airTime.orEmpty(),
-            {
-                val formatted = formatTime(it)
-                onChange(d.copy(airTime = formatted.takeIf { s -> s.isNotBlank() }))
-            },
-            Modifier.weight(1f),
-            keyboardType = KeyboardType.Number
+            { onChange(d.copy(airTime = it.takeIf { s -> s.isNotBlank() })) },
+            Modifier.weight(1f)
         )
-        TextFieldSmall(
+        TimeField(
             "B. Time",
             d.blockTime.orEmpty(),
-            {
-                val formatted = formatTime(it)
-                onChange(d.copy(blockTime = formatted.takeIf { s -> s.isNotBlank() }))
-            },
-            Modifier.weight(1f),
-            keyboardType = KeyboardType.Number
+            { onChange(d.copy(blockTime = it.takeIf { s -> s.isNotBlank() })) },
+            Modifier.weight(1f)
         )
         TextFieldSmall(
             "CI",
@@ -821,6 +817,58 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
 }
 
 /* ----------------------------- Components ----------------------------- */
+@Composable
+private fun TimeField(
+    label: String,
+    value: String,
+    onChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var textFieldValue by remember(value) {
+        mutableStateOf(TextFieldValue(value))
+    }
+
+    OutlinedTextField(
+        value = textFieldValue,
+        onValueChange = { newValue ->
+            val digitsOnly = newValue.text.filter { it.isDigit() }
+
+            val formatted = when {
+                digitsOnly.isEmpty() -> ""
+                digitsOnly.length <= 2 -> digitsOnly
+                digitsOnly.length == 3 -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2)}"
+                else -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2, 4)}"
+            }
+
+            // Calculate new cursor position
+            val newCursor = when {
+                formatted.length <= 2 -> formatted.length
+                digitsOnly.length == 3 -> 4  // After "XX:X"
+                else -> 5  // After "XX:XX"
+            }.coerceAtMost(formatted.length)
+
+            @Suppress("ASSIGNED_BUT_NEVER_ACCESSED")
+            textFieldValue = TextFieldValue(
+                text = formatted,
+                selection = TextRange(newCursor)
+            )
+
+            onChange(formatted.takeIf { it.isNotBlank() } ?: "")
+        },
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+            cursorColor = MaterialTheme.colorScheme.secondary,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier
+    )
+}
 
 @Composable
 private fun IdentityStrip(
@@ -1084,8 +1132,7 @@ private fun validateNumeric(input: String, allowDecimal: Boolean = false): Strin
 
 /**
  * Formats time input as HH:MM
- * Allows: digits and colon
- * Auto-inserts colon after 2 digits
+ * Handles cursor position to prevent digit reversal
  */
 private fun formatTime(input: String): String {
     // Remove everything except digits
@@ -1093,8 +1140,10 @@ private fun formatTime(input: String): String {
 
     return when {
         digitsOnly.isEmpty() -> ""
-        digitsOnly.length <= 2 -> digitsOnly
-        else -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2).take(2)}"
+        digitsOnly.length == 1 -> digitsOnly
+        digitsOnly.length == 2 -> digitsOnly
+        digitsOnly.length == 3 -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2)}"
+        else -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2, 4)}"
     }
 }
 
