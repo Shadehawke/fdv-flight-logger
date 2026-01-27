@@ -6,5 +6,6 @@ object Routes {
     const val HISTORY = "history"
     const val SETTINGS = "settings"
     const val SPLASH = "splash"
+    const val LANDING = "landing"
 
 }

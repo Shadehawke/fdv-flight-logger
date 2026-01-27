@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [FlightLogEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class FdvDatabase : RoomDatabase() {
@@ -26,9 +26,14 @@ abstract class FdvDatabase : RoomDatabase() {
 
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Add new columns
                 db.execSQL("ALTER TABLE flight_logs ADD COLUMN depQnh TEXT")
                 db.execSQL("ALTER TABLE flight_logs ADD COLUMN arrFlaps TEXT")
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE flight_logs ADD COLUMN flightType TEXT NOT NULL DEFAULT 'ONLINE'")
             }
         }
 
@@ -39,7 +44,7 @@ abstract class FdvDatabase : RoomDatabase() {
                     FdvDatabase::class.java,
                     "fdv_flight_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
 
                 INSTANCE = instance

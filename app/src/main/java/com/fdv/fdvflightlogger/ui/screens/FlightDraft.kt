@@ -1,10 +1,13 @@
 package com.fdv.fdvflightlogger.ui.screens
 
+import com.fdv.fdvflightlogger.data.db.FlightType
 data class FlightDraft(
     val id: Long? = null,
 
     val dep: String = "",
     val arr: String = "",
+
+    val flightType: FlightType = FlightType.ONLINE,
 
     val depRwy: String? = null,
     val depGate: String? = null,

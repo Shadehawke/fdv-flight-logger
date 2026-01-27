@@ -13,7 +13,7 @@ import com.fdv.fdvflightlogger.ui.AppViewModel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,7 +132,7 @@ private fun <T : Enum<T>> EnumDropdown(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         )
 
         ExposedDropdownMenu(

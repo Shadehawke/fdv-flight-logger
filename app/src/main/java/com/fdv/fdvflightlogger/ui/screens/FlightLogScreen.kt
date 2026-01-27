@@ -70,6 +70,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.fdv.fdvflightlogger.data.db.FlightType
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
@@ -98,6 +99,7 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             d.id?.toString() ?: "",
             d.dep,
             d.arr,
+            d.flightType.name,
             d.depRwy ?: "",
             d.depGate ?: "",
             d.sid ?: "",
@@ -140,6 +142,9 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             id = (v[0] as? String)?.takeIf { it.isNotBlank() }?.toLongOrNull(),
             dep = v[1] as String,
             arr = v[2] as String,
+            flightType = (v[3] as? String)?.let {
+                runCatching { FlightType.valueOf(it) }.getOrDefault(FlightType.ONLINE)
+            } ?: FlightType.ONLINE,
             depRwy = (v[3] as? String)?.takeIf { it.isNotBlank() },
             depGate = (v[4] as? String)?.takeIf { it.isNotBlank() },
             sid = (v[5] as? String)?.takeIf { it.isNotBlank() },
@@ -223,16 +228,27 @@ fun FlightLogScreen(
         confirmDiscard.value = true
     }
 
+    // Auto-save draft every 60 seconds if dirty
     LaunchedEffect(isDirty) {
         while (isDirty) {
             delay(60000)
             if (draft.dep.isNotBlank() && draft.arr.isNotBlank()) {
                 appViewModel.saveFlight(draft)
+
+                // If this was a new flight (no ID), get the auto-generated ID
+                if (draft.id == null) {
+                    val saved = appViewModel.getLatestFlight()
+                    if (saved != null) {
+                        draft = draft.copy(id = saved.id)
+                    }
+                }
+
                 initialDraft = draft
             }
         }
     }
 
+    // Save when leaving the screen
     DisposableEffect(Unit) {
         onDispose {
             if (isDirty && draft.dep.isNotBlank() && draft.arr.isNotBlank()) {
@@ -250,7 +266,6 @@ fun FlightLogScreen(
                 TextButton(
                     onClick = {
                         confirmDiscard.value = false
-                        // Revert to baseline so you don't leak edits if you stay
                         draft = initialDraft
                         navController.popBackStack()
                     }
@@ -311,10 +326,8 @@ fun FlightLogScreen(
                     appViewModel.saveFlight(draft)
 
                     if (editFlightId != null) {
-                        // Edit mode: keep current values, but mark them as “saved”
                         initialDraft = draft
                     } else {
-                        // Create mode: clear the form and baseline
                         val blank = FlightDraft()
                         draft = blank
                         initialDraft = blank

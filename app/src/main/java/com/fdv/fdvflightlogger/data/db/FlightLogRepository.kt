@@ -16,6 +16,7 @@ class FlightLogRepository(context: Context) {
             createdAtEpochMs = createdAtEpochMs,
             dep = draft.dep,
             arr = draft.arr,
+            flightType = draft.flightType.name,
             depRwy = draft.depRwy,
             depGate = draft.depGate,
             sid = draft.sid,
@@ -62,4 +63,8 @@ class FlightLogRepository(context: Context) {
     suspend fun delete(flight: FlightLogEntity) = dao.deleteFlight(flight)
 
     suspend fun upsert(entity: FlightLogEntity): Long = dao.upsert(entity)
+
+    suspend fun getLatestFlight(): FlightLogEntity? {
+        return dao.getLatestFlight()
+    }
 }

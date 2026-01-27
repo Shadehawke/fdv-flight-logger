@@ -23,10 +23,9 @@ fun SplashScreen(
     isSetupComplete: Boolean,
     onNavigateNext: (String) -> Unit
 ) {
-    // 1) Kick animation immediately (first frame)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED")
     var animateIn by remember { mutableStateOf(false) }
 
-    // 2) Animate alpha + scale
     val alpha by animateFloatAsState(
         targetValue = if (animateIn) 1f else 0f,
         animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
@@ -43,7 +42,7 @@ fun SplashScreen(
     LaunchedEffect(isSetupComplete) {
         animateIn = true
         delay(650) // adjust: 450–800ms is the usual sweet spot
-        onNavigateNext(if (isSetupComplete) Routes.FLIGHT_LOG else Routes.SETUP)
+        onNavigateNext(if (isSetupComplete) Routes.LANDING else Routes.SETUP)
     }
 
     Box(

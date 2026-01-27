@@ -157,6 +157,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return flightRepo.getById(id)
     }
 
+    suspend fun getLatestFlight(): FlightLogEntity? {
+        return flightRepo.getLatestFlight()
+    }
+
     fun deleteFlight(flight: FlightLogEntity) {
         viewModelScope.launch {
             try {

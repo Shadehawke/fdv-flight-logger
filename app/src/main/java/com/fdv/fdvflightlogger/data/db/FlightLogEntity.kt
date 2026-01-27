@@ -11,6 +11,8 @@ data class FlightLogEntity(
     val dep: String,
     val arr: String,
 
+    val flightType: String = FlightType.ONLINE.name,
+
     val depRwy: String? = null,
     val depGate: String? = null,
     val sid: String? = null,

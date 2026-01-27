@@ -11,6 +11,7 @@ import androidx.navigation.navArgument
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.screens.FlightDetailScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightHistoryScreen
+import com.fdv.fdvflightlogger.ui.screens.FlightLandingScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightLogScreen
 import com.fdv.fdvflightlogger.ui.screens.SetupScreen
 import com.fdv.fdvflightlogger.ui.screens.SettingsScreen
@@ -22,6 +23,7 @@ fun AppNavHost(
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
+
 
     NavHost(
         navController = navController,
@@ -42,11 +44,19 @@ fun AppNavHost(
             )
         }
 
+        composable(Routes.LANDING) {
+            val state = appViewModel.state.collectAsStateWithLifecycle().value
+            FlightLandingScreen(
+                navController = navController,
+                pilotName = state.profile.name
+            )
+        }
+
         composable(Routes.SETUP) {
             SetupScreen(
                 appViewModel = appViewModel,
                 onSetupComplete = {
-                    navController.navigate(Routes.FLIGHT_LOG) {
+                    navController.navigate(Routes.LANDING) {
                         popUpTo(Routes.SETUP) { inclusive = true }
                     }
                 }
