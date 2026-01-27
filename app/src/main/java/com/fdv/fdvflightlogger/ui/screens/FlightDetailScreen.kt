@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
+import com.fdv.fdvflightlogger.data.db.FlightType
 import com.fdv.fdvflightlogger.ui.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -163,9 +164,18 @@ private fun FlightDetailContent(
             ) {
                 Text("${flight.dep} → ${flight.arr}", style = MaterialTheme.typography.titleLarge)
 
+                // Flight Type
+                Text(
+                    text = runCatching {
+                        FlightType.valueOf(flight.flightType).displayName()
+                    }.getOrDefault("Online"),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
                 val meta = listOfNotNull(
-                    flight.flightNumber?.takeIf { it.isNotBlank() },  // ← Added ?.
-                    flight.aircraft?.takeIf { it.isNotBlank() }       // ← Added ?.
+                    flight.flightNumber?.takeIf { it.isNotBlank() },
+                    flight.aircraft?.takeIf { it.isNotBlank() }
                 ).joinToString(" • ")
 
                 if (meta.isNotBlank()) {

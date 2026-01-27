@@ -104,7 +104,7 @@ object ExportPdf {
         // Rows per page: subtract 1 row for column header
         val rowsPerPage = ((tableBottom - tableTop) / ROW_H - 1).coerceAtLeast(1)
 
-        val rows = if (flights.isEmpty()) listOf<FlightLogEntity?>(null) else flights
+        val rows = flights.ifEmpty { listOf<FlightLogEntity?>(null) }
 
         var pageNum = 1
         var index = 0
@@ -249,21 +249,28 @@ object ExportPdf {
         var hi = text.length
         while (lo < hi) {
             val mid = (lo + hi) / 2
-            val candidate = text.substring(0, mid) + ell
+            val candidate = text.take(mid) + ell
             if (paint.measureText(candidate) <= maxWidth) lo = mid + 1 else hi = mid
         }
         val cut = max(0, lo - 1)
-        return text.substring(0, cut) + ell
+        return text.take(cut) + ell
     }
 
     private fun rowValues(f: FlightLogEntity): List<String> {
         val date = dateFmt.format(Instant.ofEpochMilli(f.createdAtEpochMs))
 
-        val notes = when {
-            !f.scratchpad.isNullOrBlank() -> f.scratchpad.replace("\n", " ").trim()
-            !f.route.isNullOrBlank() -> "Route: ${f.route}".trim()
-            else -> ""
-        }
+        val notes = buildString {
+            append(f.flightType.replace("_", " "))
+
+            if (!f.scratchpad.isNullOrBlank()) {
+                if (isNotEmpty()) append(" | ")
+                append(f.scratchpad.replace("\n", " ").trim())
+            }
+            if (!f.route.isNullOrBlank()) {
+                if (isNotEmpty()) append(" | ")
+                append("Route: ${f.route}")
+            }
+        }.trim()
 
         return listOf(
             date,

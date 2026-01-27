@@ -4,12 +4,12 @@ import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 
 object ExportCsv {
 
-    // Keep columns stable for Excel import
     private val headers = listOf(
         "CreatedAtEpochMs",
         "FlightNumber",
         "Aircraft",
         "DEP","ARR",
+        "FlightType",
         "DepRWY","DepGate","SID",
         "CruiseFL","DepFlaps","V2","Route",
         "DepQNH",
@@ -34,6 +34,7 @@ object ExportCsv {
                 f.flightNumber,
                 f.aircraft,
                 f.dep, f.arr,
+                f.flightType,
                 f.depRwy, f.depGate, f.sid,
                 f.cruiseFl, f.depFlaps, f.v2, f.route,
                 f.depQnh,
