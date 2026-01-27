@@ -886,15 +886,10 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall(
-            "Crz. Wind",
-            d.crzWind.orEmpty(),
-            {
-                val formatted = formatCrzWind(it)
-                onChange(d.copy(crzWind = formatted.takeIf { s -> s.isNotBlank() }))
-            },
-            Modifier.weight(1f),
-            keyboardType = KeyboardType.Number
+        CrzWindField(
+            value = d.crzWind.orEmpty(),
+            onChange = { onChange(d.copy(crzWind = it.takeIf { s -> s.isNotBlank() })) },
+            modifier = Modifier.weight(1f)
         )
 
         // OAT field with unit label
@@ -963,6 +958,58 @@ class TimeVisualTransformation : VisualTransformation {
     }
 }
 
+/**
+ * Visual transformation that displays wind as XXX/XX without modifying the actual value
+ * Direction: 3 digits with leading zeros (e.g., 096)
+ * Speed: 2-3 digits without leading zeros (e.g., 25, not 025)
+ */
+class CrzWindVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digitsOnly = text.text.filter { it.isDigit() }.take(6) // Max 6 digits (XXX/XXX)
+
+        val formatted = when {
+            digitsOnly.isEmpty() -> ""
+            digitsOnly.length <= 3 -> digitsOnly
+            else -> {
+                val direction = digitsOnly.take(3).padStart(3, '0')
+                val speed = digitsOnly.drop(3).take(3).trimStart('0').ifEmpty { "0" }
+                "$direction/$speed"
+            }
+        }
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                // Original is just digits, transformed has a slash after position 3
+                return when {
+                    offset <= 3 -> offset
+                    else -> {
+                        // After position 3, add 1 for the slash
+                        val adjustedOffset = offset + 1
+                        // Don't exceed the formatted text length
+                        adjustedOffset.coerceAtMost(formatted.length)
+                    }
+                }
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                // Transformed has a slash at position 3
+                return when {
+                    offset <= 3 -> offset
+                    offset == 4 -> 3 // Slash position maps back to position 3
+                    else -> {
+                        // After slash, subtract 1
+                        val adjustedOffset = offset - 1
+                        // Don't exceed the original text length
+                        adjustedOffset.coerceAtMost(digitsOnly.length)
+                    }
+                }
+            }
+        }
+
+        return TransformedText(AnnotatedString(formatted), offsetMapping)
+    }
+}
+
 @Composable
 private fun TimeField(
     label: String,
@@ -980,6 +1027,35 @@ private fun TimeField(
         label = { Text(label) },
         singleLine = true,
         visualTransformation = TimeVisualTransformation(),  // ← ADD THIS LINE
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+            cursorColor = MaterialTheme.colorScheme.secondary,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun CrzWindField(
+    value: String,
+    onChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { input ->
+            // Only allow digits, max 6 characters (XXX/XXX)
+            val digitsOnly = input.filter { it.isDigit() }.take(6)
+            onChange(digitsOnly)
+        },
+        label = { Text("Crz. Wind") },
+        singleLine = true,
+        visualTransformation = CrzWindVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.secondary,
@@ -1411,39 +1487,6 @@ private fun formatQnh(input: String, unit: QnhUnit): String {
             // Format as xxxx (integers only, max 4 digits: 1013)
             digitsOnly.filter { it.isDigit() }.take(4)
         }
-    }
-}
-
-/**
- * Formats cruise wind as XXX/XX
- * Direction: 3 digits (000-360, leading zeros shown)
- * Speed: 2-3 digits (no leading zero, e.g., 25 not 025)
- * Examples: 096/25, 270/15, 360/100
- */
-private fun formatCrzWind(input: String): String {
-    // Remove everything except digits and slash
-    val cleaned = input.filter { it.isDigit() || it == '/' }
-
-    // Split by slash
-    val parts = cleaned.split('/')
-
-    return when {
-        // No slash yet - just typing direction
-        parts.size == 1 -> {
-            val direction = parts[0].take(3)
-            if (cleaned.endsWith('/')) {
-                "$direction/"
-            } else {
-                direction
-            }
-        }
-        // Has slash - format both parts
-        parts.size >= 2 -> {
-            val direction = parts[0].take(3).padStart(3, '0')  // Always 3 digits with leading zeros
-            val speed = parts[1].take(3).trimStart('0').ifEmpty { "0" }  // Remove leading zeros, max 3 digits
-            "$direction/$speed"
-        }
-        else -> cleaned
     }
 }
 

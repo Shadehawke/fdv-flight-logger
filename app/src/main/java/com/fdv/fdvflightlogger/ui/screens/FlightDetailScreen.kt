@@ -201,7 +201,7 @@ private fun FlightDetailContent(
             ReadRow("Fuel", flight.fuel.orEmpty(), "PAX", flight.pax.orEmpty(), "Payload", flight.payload.orEmpty())
             ReadRow("B. Time", formatStoredTime(flight.blockTime), "A. Time", formatStoredTime(flight.airTime), "CI", flight.costIndex.orEmpty())
             ReadRow("R. Fuel", flight.reserveFuel.orEmpty(), "ZFW", flight.zfw.orEmpty(), "", "")
-            ReadRow("Crz. Wind", flight.crzWind.orEmpty(), "Crz. OAT", flight.crzOat.orEmpty(), "", "")
+            ReadRow("Crz. Wind", formatStoredWind(flight.crzWind), "Crz. OAT", flight.crzOat.orEmpty(), "", "")
         }
 
         SectionCard("ATC") {
@@ -281,5 +281,21 @@ private fun formatStoredTime(digits: String?): String {
         d.length <= 2 -> d
         d.length == 3 -> "${d.take(2)}:${d.drop(2)}"
         else -> "${d.take(2)}:${d.drop(2).take(2)}"
+    }
+}
+
+/**
+ * Formats stored wind digits (e.g., "29045") as XXX/XX (e.g., "290/45")
+ */
+private fun formatStoredWind(digits: String?): String {
+    if (digits.isNullOrBlank()) return ""
+    val d = digits.filter { it.isDigit() }.take(6)
+    return when {
+        d.length <= 3 -> d
+        else -> {
+            val direction = d.take(3).padStart(3, '0')
+            val speed = d.drop(3).take(3).trimStart('0').ifEmpty { "0" }
+            "$direction/$speed"
+        }
     }
 }
