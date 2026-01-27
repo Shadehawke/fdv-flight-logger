@@ -66,10 +66,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -925,6 +927,42 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
 }
 
 /* ----------------------------- Components ----------------------------- */
+
+/**
+ * Visual transformation that displays digits as HH:MM without modifying the actual value
+ */
+class TimeVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digitsOnly = text.text.filter { it.isDigit() }.take(4)
+
+        val formatted = when {
+            digitsOnly.isEmpty() -> ""
+            digitsOnly.length <= 2 -> digitsOnly
+            digitsOnly.length == 3 -> "${digitsOnly.take(2)}:${digitsOnly.drop(2)}"
+            else -> "${digitsOnly.take(2)}:${digitsOnly.drop(2).take(2)}"
+        }
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                return when {
+                    offset <= 2 -> offset
+                    else -> offset + 1 // Account for the colon
+                }
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                return when {
+                    offset <= 2 -> offset
+                    offset == 3 -> 2 // Colon position maps back to position 2
+                    else -> offset - 1 // After colon, subtract 1
+                }
+            }
+        }
+
+        return TransformedText(AnnotatedString(formatted), offsetMapping)
+    }
+}
+
 @Composable
 private fun TimeField(
     label: String,
@@ -932,38 +970,16 @@ private fun TimeField(
     onChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var textFieldValue by remember(value) {
-        mutableStateOf(TextFieldValue(value))
-    }
-
     OutlinedTextField(
-        value = textFieldValue,
-        onValueChange = { newValue ->
-            val digitsOnly = newValue.text.filter { it.isDigit() }
-
-            val formatted = when {
-                digitsOnly.isEmpty() -> ""
-                digitsOnly.length <= 2 -> digitsOnly
-                digitsOnly.length == 3 -> "${digitsOnly.take(2)}:${digitsOnly.drop(2)}"
-                else -> "${digitsOnly.take(2)}:${digitsOnly.drop(2).take(2)}"
-            }
-
-            // Calculate new cursor position
-            val newCursor = when {
-                formatted.length <= 2 -> formatted.length
-                digitsOnly.length == 3 -> 4  // After "XX:X"
-                else -> 5  // After "XX:XX"
-            }.coerceAtMost(formatted.length)
-
-            textFieldValue = TextFieldValue(
-                text = formatted,
-                selection = TextRange(newCursor)
-            )
-
-            onChange(formatted.takeIf { it.isNotBlank() } ?: "")
+        value = value,
+        onValueChange = { input ->
+            // Only allow digits, max 4 characters
+            val digitsOnly = input.filter { it.isDigit() }.take(4)
+            onChange(digitsOnly)  // ← Store plain digits, NOT formatted
         },
         label = { Text(label) },
         singleLine = true,
+        visualTransformation = TimeVisualTransformation(),  // ← ADD THIS LINE
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.secondary,
@@ -1231,10 +1247,10 @@ private fun NotesField(
 
 @Composable
 private fun AtcStrip(
-    info: String?,  // ← Change parameters to nullable
+    info: String?,
     initAlt: String?,
     squawk: String?,
-    onInfoChange: (String?) -> Unit,  // ← Change callbacks to accept nullable
+    onInfoChange: (String?) -> Unit,
     onInitAltChange: (String?) -> Unit,
     onSquawkChange: (String?) -> Unit
 ) {

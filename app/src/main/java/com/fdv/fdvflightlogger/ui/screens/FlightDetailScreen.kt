@@ -199,7 +199,7 @@ private fun FlightDetailContent(
 
         SectionCard("Aircraft + Performance") {
             ReadRow("Fuel", flight.fuel.orEmpty(), "PAX", flight.pax.orEmpty(), "Payload", flight.payload.orEmpty())
-            ReadRow("B. Time", flight.blockTime.orEmpty(), "A. Time", flight.airTime.orEmpty(), "CI", flight.costIndex.orEmpty())
+            ReadRow("B. Time", formatStoredTime(flight.blockTime), "A. Time", formatStoredTime(flight.airTime), "CI", flight.costIndex.orEmpty())
             ReadRow("R. Fuel", flight.reserveFuel.orEmpty(), "ZFW", flight.zfw.orEmpty(), "", "")
             ReadRow("Crz. Wind", flight.crzWind.orEmpty(), "Crz. OAT", flight.crzOat.orEmpty(), "", "")
         }
@@ -269,4 +269,17 @@ private fun ReadBlock(label: String, value: String) {
         minLines = 2,
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+/**
+ * Formats stored time digits (e.g., "0345") as HH:MM (e.g., "03:45")
+ */
+private fun formatStoredTime(digits: String?): String {
+    if (digits.isNullOrBlank()) return ""
+    val d = digits.filter { it.isDigit() }.take(4)
+    return when {
+        d.length <= 2 -> d
+        d.length == 3 -> "${d.take(2)}:${d.drop(2)}"
+        else -> "${d.take(2)}:${d.drop(2).take(2)}"
+    }
 }
