@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
+import com.fdv.fdvflightlogger.ui.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +80,7 @@ fun FlightLandingScreen(
             Spacer(Modifier.height(48.dp))
 
             Button(
-                onClick = { navController.navigate("log") },
+                onClick = { navController.navigate(Routes.FLIGHT_LOG) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
@@ -90,7 +91,7 @@ fun FlightLandingScreen(
             Spacer(Modifier.height(16.dp))
 
             OutlinedButton(
-                onClick = { navController.navigate("history") },
+                onClick = { navController.navigate(Routes.HISTORY) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Filled.Edit, contentDescription = null)

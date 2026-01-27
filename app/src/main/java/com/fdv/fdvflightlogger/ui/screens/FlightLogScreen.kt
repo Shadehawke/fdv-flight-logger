@@ -29,8 +29,12 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -542,28 +546,41 @@ private fun RouteHeader(
 }
 
 @Composable
-private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUnit: QnhUnit) {
+private fun DepartureEnrouteFields(
+    draft: FlightDraft,
+    onChange: (FlightDraft) -> Unit,
+    qnhUnit: QnhUnit
+) {
+    // Flight Type dropdown (full width at top)
+    FlightTypeDropdown(
+        flightType = draft.flightType,
+        onFlightTypeChange = { onChange(draft.copy(flightType = it)) },
+        modifier = Modifier.fillMaxWidth()
+    )
+
+    Spacer(Modifier.height(12.dp))
+
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextFieldSmall(
             "RWY",
             draft.depRwy.orEmpty(),
-            { onChange(draft.copy(depRwy = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            { onChange(draft.copy(depRwy = it.uppercase().takeIf { s -> s.isNotBlank() })) },
             Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+            capitalization = KeyboardCapitalization.Characters
         )
         TextFieldSmall(
             "Gate",
             draft.depGate.orEmpty(),
-            { onChange(draft.copy(depGate = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            { onChange(draft.copy(depGate = it.uppercase().takeIf { s -> s.isNotBlank() })) },
             Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+            capitalization = KeyboardCapitalization.Characters
         )
         TextFieldSmall(
             "SID",
             draft.sid.orEmpty(),
-            { onChange(draft.copy(sid = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            { onChange(draft.copy(sid = it.uppercase().takeIf { s -> s.isNotBlank() })) },
             Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+            capitalization = KeyboardCapitalization.Characters
         )
     }
 
@@ -602,7 +619,7 @@ private fun DepartureEnrouteFields(draft: FlightDraft, onChange: (FlightDraft) -
 
     RouteTextField(
         value = draft.route.orEmpty(),
-        onChange = { onChange(draft.copy(route = it.uppercase().takeIf { s -> s.isNotBlank() })) }  // ← Add .uppercase()
+        onChange = { onChange(draft.copy(route = it.uppercase().takeIf { s -> s.isNotBlank() })) }
     )
 
     TextFieldSmall(
@@ -1023,6 +1040,55 @@ private fun TextFieldSmall(
         ),
         modifier = modifier
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FlightTypeDropdown(
+    flightType: FlightType,
+    onFlightTypeChange: (FlightType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = flightType.displayName(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Flight Type") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            FlightType.entries.forEach { type ->
+                DropdownMenuItem(
+                    text = { Text(type.displayName()) },
+                    onClick = {
+                        onFlightTypeChange(type)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable
