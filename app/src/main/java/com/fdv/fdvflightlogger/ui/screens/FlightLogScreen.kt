@@ -360,14 +360,16 @@ fun FlightLogScreen(
                     draft = draft,
                     onDraftChange = { draft = it },
                     qnhUnit = state.settings.qnhUnit,
-                    tempUnit = state.settings.tempUnit
+                    tempUnit = state.settings.tempUnit,
+                    activeSection = activeSection
                 )
 
                 WindowWidthSizeClass.Medium -> MediumTwoColumnLayout(
                     draft = draft,
                     onDraftChange = { draft = it },
                     qnhUnit = state.settings.qnhUnit,
-                    tempUnit = state.settings.tempUnit
+                    tempUnit = state.settings.tempUnit,
+                    activeSection = activeSection
                 )
 
                 else -> CompactSingleColumnLayout(
@@ -460,43 +462,66 @@ private fun MediumTwoColumnLayout(
     draft: FlightDraft,
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
-    tempUnit: TempUnit
+    tempUnit: TempUnit,
+    activeSection: FlightSection  // ← ADD PARAMETER
 ) {
-    val scroll = rememberScrollState()
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scroll)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        modifier = Modifier.fillMaxSize()
     ) {
-        RouteHeader(draft, onDraftChange)
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        // Scrollable content area
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                SectionCard(title = "Departure + Enroute") {
-                    DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
-                }
-                SectionCard(title = "Arrival") {
-                    ArrivalFields(draft, onDraftChange, qnhUnit)
-                }
-            }
+            RouteHeader(draft, onDraftChange)
 
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                SectionCard(title = "Aircraft + Performance") {
-                    AircraftPerfFields(draft, onDraftChange, tempUnit)
+            // Show active section only
+            when (activeSection) {
+                FlightSection.DEPARTURE -> {
+                    SectionCard(title = "Departure + Enroute") {
+                        DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
+                    }
                 }
-                SectionCard(title = "Scratchpad") {
-                    NotesField(
-                        value = draft.scratchpad.orEmpty(),
-                        onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
-                    )
+
+                FlightSection.ARRIVAL -> {
+                    SectionCard(title = "Arrival") {
+                        ArrivalFields(draft, onDraftChange, qnhUnit)
+                    }
+                }
+
+                FlightSection.AIRCRAFT -> {
+                    SectionCard(title = "Aircraft + Performance") {
+                        AircraftPerfFields(draft, onDraftChange, tempUnit)
+                    }
+                }
+
+                FlightSection.ATC -> {
+                    SectionCard(title = "ATC") {
+                        AtcFields(
+                            info = draft.info,
+                            initAlt = draft.initAlt,
+                            squawk = draft.squawk,
+                            onInfoChange = { onDraftChange(draft.copy(info = it)) },
+                            onInitAltChange = { onDraftChange(draft.copy(initAlt = it)) },
+                            onSquawkChange = { onDraftChange(draft.copy(squawk = it)) }
+                        )
+                    }
                 }
             }
+        }
+
+        // Fixed scratchpad at bottom
+        SectionCard(
+            title = "Scratchpad",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            NotesField(
+                value = draft.scratchpad.orEmpty(),
+                onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
+            )
         }
     }
 }
@@ -506,46 +531,66 @@ private fun ExpandedWhiteboardLayout(
     draft: FlightDraft,
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
-    tempUnit: TempUnit
+    tempUnit: TempUnit,
+    activeSection: FlightSection  // ← ADD PARAMETER
 ) {
-    val scroll = rememberScrollState()
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scroll)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        modifier = Modifier.fillMaxSize()
     ) {
-        RouteHeader(draft, onDraftChange)
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        // Scrollable content area
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                SectionCard(title = "Departure + Enroute") {
-                    DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
-                }
-            }
+            RouteHeader(draft, onDraftChange)
 
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                SectionCard(title = "Arrival") {
-                    ArrivalFields(draft, onDraftChange, qnhUnit)
+            // Show active section only
+            when (activeSection) {
+                FlightSection.DEPARTURE -> {
+                    SectionCard(title = "Departure + Enroute") {
+                        DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
+                    }
                 }
-                SectionCard(title = "Scratchpad") {
-                    NotesField(
-                        value = draft.scratchpad.orEmpty(),
-                        onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
-                    )
-                }
-            }
 
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                SectionCard(title = "Aircraft + Performance") {
-                    AircraftPerfFields(draft, onDraftChange, tempUnit)
+                FlightSection.ARRIVAL -> {
+                    SectionCard(title = "Arrival") {
+                        ArrivalFields(draft, onDraftChange, qnhUnit)
+                    }
+                }
+
+                FlightSection.AIRCRAFT -> {
+                    SectionCard(title = "Aircraft + Performance") {
+                        AircraftPerfFields(draft, onDraftChange, tempUnit)
+                    }
+                }
+
+                FlightSection.ATC -> {
+                    SectionCard(title = "ATC") {
+                        AtcFields(
+                            info = draft.info,
+                            initAlt = draft.initAlt,
+                            squawk = draft.squawk,
+                            onInfoChange = { onDraftChange(draft.copy(info = it)) },
+                            onInitAltChange = { onDraftChange(draft.copy(initAlt = it)) },
+                            onSquawkChange = { onDraftChange(draft.copy(squawk = it)) }
+                        )
+                    }
                 }
             }
+        }
+
+        // Fixed scratchpad at bottom
+        SectionCard(
+            title = "Scratchpad",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            NotesField(
+                value = draft.scratchpad.orEmpty(),
+                onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
+            )
         }
     }
 }
