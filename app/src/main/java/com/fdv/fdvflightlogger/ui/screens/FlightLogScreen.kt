@@ -1,4 +1,4 @@
-@file:Suppress("unused", "ASSIGNED_VALUE_IS_NEVER_READ")
+@file:Suppress("unused", "ASSIGNED_VALUE_IS_NEVER_READ", "SameParameterValue")
 
 package com.fdv.fdvflightlogger.ui.screens
 
@@ -697,20 +697,17 @@ private fun DepartureEnrouteFields(
         )
     }
 
+    QnhField(
+        label = "QNH",
+        value = draft.depQnh.orEmpty(),
+        qnhUnit = qnhUnit,
+        onChange = { onChange(draft.copy(depQnh = it.takeIf { s -> s.isNotBlank() })) },
+        modifier = Modifier.fillMaxWidth(0.33f)
+    )
+
     RouteTextField(
         value = draft.route.orEmpty(),
         onChange = { onChange(draft.copy(route = it.uppercase().takeIf { s -> s.isNotBlank() })) }
-    )
-
-    TextFieldSmall(
-        "Dep QNH",
-        draft.depQnh.orEmpty(),
-        {
-            val formatted = formatQnh(it, qnhUnit)
-            onChange(draft.copy(depQnh = formatted.takeIf { s -> s.isNotBlank() }))
-        },
-        Modifier.fillMaxWidth(),
-        keyboardType = KeyboardType.Decimal
     )
 }
 
@@ -748,15 +745,12 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
             Modifier.weight(1f),
             capitalization = KeyboardCapitalization.Characters
         )
-        TextFieldSmall(
-            "QNH",
-            d.qnh.orEmpty(),
-            {
-                val formatted = formatQnh(it, qnhUnit)
-                onChange(d.copy(qnh = formatted.takeIf { s -> s.isNotBlank() }))
-            },
-            Modifier.weight(1f),
-            keyboardType = KeyboardType.Decimal
+        QnhField(
+            label = "QNH",
+            value = d.qnh.orEmpty(),
+            qnhUnit = qnhUnit,
+            onChange = { onChange(d.copy(qnh = it.takeIf { s -> s.isNotBlank() })) },
+            modifier = Modifier.weight(1f)
         )
         TextFieldSmall(
             "Arr Flaps",
@@ -923,9 +917,6 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
 
 /* ----------------------------- Components ----------------------------- */
 
-/**
- * Visual transformation that displays digits as HH:MM without modifying the actual value
- */
 class TimeVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val digitsOnly = text.text.filter { it.isDigit() }.take(4)
@@ -958,11 +949,6 @@ class TimeVisualTransformation : VisualTransformation {
     }
 }
 
-/**
- * Visual transformation that displays wind as XXX/XX without modifying the actual value
- * Direction: 3 digits with leading zeros (e.g., 096)
- * Speed: 2-3 digits without leading zeros (e.g., 25, not 025)
- */
 class CrzWindVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val digitsOnly = text.text.filter { it.isDigit() }.take(6) // Max 6 digits (XXX/XXX)
@@ -1000,6 +986,43 @@ class CrzWindVisualTransformation : VisualTransformation {
                         // After slash, subtract 1
                         val adjustedOffset = offset - 1
                         // Don't exceed the original text length
+                        adjustedOffset.coerceAtMost(digitsOnly.length)
+                    }
+                }
+            }
+        }
+
+        return TransformedText(AnnotatedString(formatted), offsetMapping)
+    }
+}
+
+class QnhInHgVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digitsOnly = text.text.filter { it.isDigit() }.take(4) // Max 4 digits
+
+        val formatted = when {
+            digitsOnly.isEmpty() -> ""
+            digitsOnly.length <= 2 -> digitsOnly
+            else -> "${digitsOnly.take(2)}.${digitsOnly.drop(2)}"
+        }
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                return when {
+                    offset <= 2 -> offset
+                    else -> {
+                        val adjustedOffset = offset + 1 // Account for decimal point
+                        adjustedOffset.coerceAtMost(formatted.length)
+                    }
+                }
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                return when {
+                    offset <= 2 -> offset
+                    offset == 3 -> 2 // Decimal point position maps back to position 2
+                    else -> {
+                        val adjustedOffset = offset - 1 // After decimal, subtract 1
                         adjustedOffset.coerceAtMost(digitsOnly.length)
                     }
                 }
@@ -1056,6 +1079,40 @@ private fun CrzWindField(
         label = { Text("Crz. Wind") },
         singleLine = true,
         visualTransformation = CrzWindVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+            cursorColor = MaterialTheme.colorScheme.secondary,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun QnhField(
+    label: String,
+    value: String,
+    qnhUnit: QnhUnit,
+    onChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { input ->
+            // Only allow digits, max 4 characters
+            val digitsOnly = input.filter { it.isDigit() }.take(4)
+            onChange(digitsOnly)
+        },
+        label = { Text(label) },
+        singleLine = true,
+        visualTransformation = when (qnhUnit) {
+            QnhUnit.INHG -> QnhInHgVisualTransformation()  // Show XX.XX for inHg
+            QnhUnit.HPA -> VisualTransformation.None  // Show XXXX for hPa (no decimal)
+        },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.secondary,
