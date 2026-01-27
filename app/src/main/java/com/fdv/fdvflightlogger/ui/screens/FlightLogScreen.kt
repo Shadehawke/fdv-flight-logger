@@ -374,18 +374,10 @@ fun FlightLogScreen(
                     draft = draft,
                     onDraftChange = { draft = it },
                     qnhUnit = state.settings.qnhUnit,
-                    tempUnit = state.settings.tempUnit
+                    tempUnit = state.settings.tempUnit,
+                    activeSection = activeSection
                 )
             }
-
-            AtcStrip(
-                info = draft.info,
-                initAlt = draft.initAlt,
-                squawk = draft.squawk,
-                onInfoChange = { draft = draft.copy(info = it) },
-                onInitAltChange = { draft = draft.copy(initAlt = it) },
-                onSquawkChange = { draft = draft.copy(squawk = it) }
-            )
         }
     }
 }
@@ -398,37 +390,68 @@ private fun CompactSingleColumnLayout(
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
+    activeSection: FlightSection
 ) {
-    val scroll = rememberScrollState()
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scroll)
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize()
     ) {
-        RouteHeader(draft, onDraftChange)
+        // Scrollable section content
+        Column(
+            modifier = Modifier
+                .weight(1f)  // ← Takes remaining space, allows scroll
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(top = 16.dp)
+        ) {
+            // Always show route header (DEP → ARR)
+            RouteHeader(draft, onDraftChange)
 
-        SectionCard(title = "Departure + Enroute") {
-            DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
+            // Show active section only
+            when (activeSection) {
+                FlightSection.DEPARTURE -> {
+                    SectionCard(title = "Departure + Enroute") {
+                        DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
+                    }
+                }
+
+                FlightSection.ARRIVAL -> {
+                    SectionCard(title = "Arrival") {
+                        ArrivalFields(draft, onDraftChange, qnhUnit)
+                    }
+                }
+
+                FlightSection.AIRCRAFT -> {
+                    SectionCard(title = "Aircraft + Performance") {
+                        AircraftPerfFields(draft, onDraftChange, tempUnit)
+                    }
+                }
+
+                FlightSection.ATC -> {
+                    SectionCard(title = "ATC") {
+                        AtcFields(
+                            info = draft.info,
+                            initAlt = draft.initAlt,
+                            squawk = draft.squawk,
+                            onInfoChange = { onDraftChange(draft.copy(info = it)) },
+                            onInitAltChange = { onDraftChange(draft.copy(initAlt = it)) },
+                            onSquawkChange = { onDraftChange(draft.copy(squawk = it)) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
         }
 
-        SectionCard(title = "Arrival") {
-            ArrivalFields(draft, onDraftChange, qnhUnit)
-        }
-
-        SectionCard(title = "Aircraft + Performance") {
-            AircraftPerfFields(draft, onDraftChange, tempUnit)
-        }
-
-        SectionCard(title = "Scratchpad") {
+        SectionCard(
+            title = "Scratchpad",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
             NotesField(
                 value = draft.scratchpad.orEmpty(),
                 onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
             )
         }
-
-        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -1016,10 +1039,12 @@ private fun RightEdgeFadeWithChevron(modifier: Modifier = Modifier) {
 @Composable
 private fun SectionCard(
     title: String,
+    modifier: Modifier = Modifier,  // ← ADD THIS PARAMETER
     content: @Composable ColumnScope.() -> Unit
 ) {
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier  // ← USE THE PARAMETER HERE
+            .fillMaxWidth(),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -1193,6 +1218,56 @@ private fun AtcStrip(
                 label = "Sqwk",
                 value = squawk.orEmpty(),
                 onChange = { onSquawkChange(it.takeIf { s -> s.isNotBlank() }) },
+                modifier = Modifier.weight(1f),
+                keyboardType = KeyboardType.Number
+            )
+        }
+    }
+}
+
+@Composable
+private fun AtcFields(
+    info: String?,
+    initAlt: String?,
+    squawk: String?,
+    onInfoChange: (String?) -> Unit,
+    onInitAltChange: (String?) -> Unit,
+    onSquawkChange: (String?) -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        TextFieldSmall(
+            label = "ATIS Info",
+            value = info.orEmpty(),
+            onChange = { onInfoChange(it.uppercase().takeIf { s -> s.isNotBlank() }) },
+            modifier = Modifier.fillMaxWidth(),
+            capitalization = KeyboardCapitalization.Characters
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TextFieldSmall(
+                label = "Initial Alt",
+                value = initAlt.orEmpty(),
+                onChange = {
+                    val validated = validateNumeric(it, allowDecimal = false)
+                    onInitAltChange(validated.takeIf { s -> s.isNotBlank() })
+                },
+                modifier = Modifier.weight(1f),
+                keyboardType = KeyboardType.Number
+            )
+
+            TextFieldSmall(
+                label = "Squawk",
+                value = squawk.orEmpty(),
+                onChange = {
+                    val validated = validateNumeric(it, allowDecimal = false)
+                    onSquawkChange(validated.takeIf { s -> s.isNotBlank() })
+                },
                 modifier = Modifier.weight(1f),
                 keyboardType = KeyboardType.Number
             )
