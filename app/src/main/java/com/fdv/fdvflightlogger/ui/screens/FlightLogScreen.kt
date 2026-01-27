@@ -1,4 +1,4 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "ASSIGNED_VALUE_IS_NEVER_READ")
 
 package com.fdv.fdvflightlogger.ui.screens
 
@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -35,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +50,6 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,10 +66,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -79,7 +78,7 @@ import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.mappers.toDraft
-import com.fdv.fdvflightlogger.ui.theme.*
+import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
 import kotlinx.coroutines.delay
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
@@ -188,6 +187,13 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
     }
 )
 
+enum class FlightSection {
+    DEPARTURE,
+    ARRIVAL,
+    AIRCRAFT,
+    ATC
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FlightLogScreen(
@@ -211,6 +217,8 @@ fun FlightLogScreen(
     val isDirty = draft.normalizedForDirtyCheck() != initialDraft.normalizedForDirtyCheck()
 
     val widthClass = rememberWindowWidthClass()
+
+    var activeSection by rememberSaveable { mutableStateOf(FlightSection.DEPARTURE) }
 
     LaunchedEffect(editFlightId) {
         if (editFlightId != null) {
@@ -322,7 +330,9 @@ fun FlightLogScreen(
             )
 
             SectionJumpChips(
-                jumpToSection = { /* still visual-only until anchors */ }
+                activeSection = activeSection,
+                showAtc = draft.flightType != FlightType.OFFLINE_NO_ATC,
+                onSectionClick = { section -> activeSection = section }
             )
 
             Button(
@@ -866,8 +876,8 @@ private fun TimeField(
             val formatted = when {
                 digitsOnly.isEmpty() -> ""
                 digitsOnly.length <= 2 -> digitsOnly
-                digitsOnly.length == 3 -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2)}"
-                else -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2, 4)}"
+                digitsOnly.length == 3 -> "${digitsOnly.take(2)}:${digitsOnly.drop(2)}"
+                else -> "${digitsOnly.take(2)}:${digitsOnly.drop(2).take(2)}"
             }
 
             // Calculate new cursor position
@@ -877,7 +887,6 @@ private fun TimeField(
                 else -> 5  // After "XX:XX"
             }.coerceAtMost(formatted.length)
 
-            @Suppress("ASSIGNED_BUT_NEVER_ACCESSED")
             textFieldValue = TextFieldValue(
                 text = formatted,
                 selection = TextRange(newCursor)
@@ -927,30 +936,43 @@ private fun IdentityStrip(
 }
 
 @Composable
-private fun SectionJumpChips(jumpToSection: (String) -> Unit) {
-    val scroll = rememberScrollState()
-
-    Box(
+private fun SectionJumpChips(
+    activeSection: FlightSection,
+    showAtc: Boolean,
+    onSectionClick: (FlightSection) -> Unit
+) {
+    Row(
         modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 8.dp)
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier.horizontalScroll(scroll),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            AssistChip(onClick = { jumpToSection("dep") }, label = { Text("Departure") })
-            AssistChip(onClick = { jumpToSection("arr") }, label = { Text("Arrival") })
-            AssistChip(onClick = { jumpToSection("ac") }, label = { Text("Aircraft") })
-            AssistChip(onClick = { jumpToSection("atc") }, label = { Text("ATC") })
-            AssistChip(onClick = { jumpToSection("notes") }, label = { Text("Notes") })
-        }
+        FilterChip(
+            selected = activeSection == FlightSection.DEPARTURE,
+            onClick = { onSectionClick(FlightSection.DEPARTURE) },
+            label = { Text("Departure") }
+        )
 
-        val canScrollMore = remember {
-            derivedStateOf { scroll.value < scroll.maxValue }
-        }.value
-        if (canScrollMore) {
-            RightEdgeFadeWithChevron(modifier = Modifier.align(Alignment.CenterEnd))
+        FilterChip(
+            selected = activeSection == FlightSection.ARRIVAL,
+            onClick = { onSectionClick(FlightSection.ARRIVAL) },
+            label = { Text("Arrival") }
+        )
+
+        FilterChip(
+            selected = activeSection == FlightSection.AIRCRAFT,
+            onClick = { onSectionClick(FlightSection.AIRCRAFT) },
+            label = { Text("Aircraft") }
+        )
+
+        // Only show ATC chip if flight type requires it
+        if (showAtc) {
+            FilterChip(
+                selected = activeSection == FlightSection.ATC,
+                onClick = { onSectionClick(FlightSection.ATC) },
+                label = { Text("ATC") }
+            )
         }
     }
 }
@@ -1221,8 +1243,8 @@ private fun formatTime(input: String): String {
         digitsOnly.isEmpty() -> ""
         digitsOnly.length == 1 -> digitsOnly
         digitsOnly.length == 2 -> digitsOnly
-        digitsOnly.length == 3 -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2)}"
-        else -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2, 4)}"
+        digitsOnly.length == 3 -> "${digitsOnly.take(2)}:${digitsOnly.drop(2)}"
+        else -> "${digitsOnly.take(2)}:${digitsOnly.drop(2).take(2)}"
     }
 }
 
