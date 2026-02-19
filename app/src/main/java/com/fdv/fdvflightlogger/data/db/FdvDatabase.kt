@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [FlightLogEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class FdvDatabase : RoomDatabase() {
@@ -37,6 +37,12 @@ abstract class FdvDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE flight_logs ADD COLUMN airline TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): FdvDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -44,7 +50,7 @@ abstract class FdvDatabase : RoomDatabase() {
                     FdvDatabase::class.java,
                     "fdv_flight_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
 
                 INSTANCE = instance

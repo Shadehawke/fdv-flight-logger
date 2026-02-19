@@ -27,6 +27,7 @@ data class FlightDraft(
     val arrFlaps: String? = null,
 
     val flightNumber: String? = null,
+    val airline: String? = null,
     val aircraft: String? = null,
     val fuel: String? = null,
     val pax: String? = null,
