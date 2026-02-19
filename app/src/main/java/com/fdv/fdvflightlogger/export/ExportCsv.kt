@@ -7,6 +7,7 @@ object ExportCsv {
     private val headers = listOf(
         "CreatedAtEpochMs",
         "FlightNumber",
+        "Airline",
         "Aircraft",
         "DEP","ARR",
         "FlightType",
@@ -32,6 +33,7 @@ object ExportCsv {
             val values = listOf(
                 f.createdAtEpochMs.toString(),
                 f.flightNumber,
+                f.airline,
                 f.aircraft,
                 f.dep, f.arr,
                 f.flightType,

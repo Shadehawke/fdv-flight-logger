@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.fdv.fdvflightlogger.data.Airlines
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightType
 import com.fdv.fdvflightlogger.ui.AppViewModel
@@ -173,13 +174,34 @@ private fun FlightDetailContent(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                val meta = listOfNotNull(
-                    flight.flightNumber?.takeIf { it.isNotBlank() },
-                    flight.aircraft?.takeIf { it.isNotBlank() }
-                ).joinToString(" • ")
+                // Build flight info: Full flight number • Aircraft • Airline name
+                val flightInfoParts = buildList {
+                    // Full flight number (airline + number)
+                    if (!flight.airline.isNullOrBlank() && !flight.flightNumber.isNullOrBlank()) {
+                        add("${flight.airline}${flight.flightNumber}")
+                    } else if (!flight.flightNumber.isNullOrBlank()) {
+                        add(flight.flightNumber)
+                    }
 
-                if (meta.isNotBlank()) {
-                    Text(meta, style = MaterialTheme.typography.bodyMedium)
+                    // Aircraft
+                    if (!flight.aircraft.isNullOrBlank()) {
+                        add(flight.aircraft)
+                    }
+
+                    // Full airline name
+                    if (!flight.airline.isNullOrBlank()) {
+                        val airlineName = Airlines.getNameByIcao(flight.airline)
+                        if (airlineName.isNotBlank()) {
+                            add(airlineName)
+                        }
+                    }
+                }
+
+                if (flightInfoParts.isNotEmpty()) {
+                    Text(
+                        text = flightInfoParts.joinToString(" • "),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }

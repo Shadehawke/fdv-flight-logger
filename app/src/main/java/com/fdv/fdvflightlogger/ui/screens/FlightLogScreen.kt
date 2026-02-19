@@ -75,6 +75,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.fdv.fdvflightlogger.data.Airlines
 import com.fdv.fdvflightlogger.data.db.FlightType
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
@@ -123,6 +124,7 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             d.arrFlaps ?: "",
 
             d.flightNumber ?: "",
+            d.airline ?: "",
             d.aircraft ?: "",
             d.fuel ?: "",
             d.pax ?: "",
@@ -168,23 +170,24 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             arrFlaps = (v[17] as? String)?.takeIf { it.isNotBlank() },
 
             flightNumber = (v[18] as? String)?.takeIf { it.isNotBlank() },
-            aircraft = (v[19] as? String)?.takeIf { it.isNotBlank() },
-            fuel = (v[20] as? String)?.takeIf { it.isNotBlank() },
-            pax = (v[21] as? String)?.takeIf { it.isNotBlank() },
-            payload = (v[22] as? String)?.takeIf { it.isNotBlank() },
-            airTime = (v[23] as? String)?.takeIf { it.isNotBlank() },
-            blockTime = (v[24] as? String)?.takeIf { it.isNotBlank() },
-            costIndex = (v[25] as? String)?.takeIf { it.isNotBlank() },
-            reserveFuel = (v[26] as? String)?.takeIf { it.isNotBlank() },
-            zfw = (v[27] as? String)?.takeIf { it.isNotBlank() },
-            crzWind = (v[28] as? String)?.takeIf { it.isNotBlank() },
-            crzOat = (v[29] as? String)?.takeIf { it.isNotBlank() },
+            airline = (v[19] as? String)?.takeIf { it.isNotBlank() },
+            aircraft = (v[20] as? String)?.takeIf { it.isNotBlank() },
+            fuel = (v[21] as? String)?.takeIf { it.isNotBlank() },
+            pax = (v[22] as? String)?.takeIf { it.isNotBlank() },
+            payload = (v[23] as? String)?.takeIf { it.isNotBlank() },
+            airTime = (v[24] as? String)?.takeIf { it.isNotBlank() },
+            blockTime = (v[25] as? String)?.takeIf { it.isNotBlank() },
+            costIndex = (v[26] as? String)?.takeIf { it.isNotBlank() },
+            reserveFuel = (v[27] as? String)?.takeIf { it.isNotBlank() },
+            zfw = (v[28] as? String)?.takeIf { it.isNotBlank() },
+            crzWind = (v[29] as? String)?.takeIf { it.isNotBlank() },
+            crzOat = (v[30] as? String)?.takeIf { it.isNotBlank() },
 
-            info = (v[30] as? String)?.takeIf { it.isNotBlank() },
-            initAlt = (v[31] as? String)?.takeIf { it.isNotBlank() },
-            squawk = (v[32] as? String)?.takeIf { it.isNotBlank() },
+            info = (v[31] as? String)?.takeIf { it.isNotBlank() },
+            initAlt = (v[32] as? String)?.takeIf { it.isNotBlank() },
+            squawk = (v[33] as? String)?.takeIf { it.isNotBlank() },
 
-            scratchpad = (v[33] as? String)?.takeIf { it.isNotBlank() }
+            scratchpad = (v[34] as? String)?.takeIf { it.isNotBlank() }
         )
     }
 )
@@ -328,7 +331,8 @@ fun FlightLogScreen(
                 pilotId = state.profile.pilotId,
                 pilotName = state.profile.name,
                 hub = state.profile.hub,
-                lastLanded = lastLandedDisplay
+                lastLanded = lastLandedDisplay,
+                currentFlight = draft
             )
 
             SectionJumpChips(
@@ -622,6 +626,40 @@ private fun RouteHeader(
                 capitalization = KeyboardCapitalization.Characters
             )
         }
+
+        if (draft.airline != null || draft.flightNumber != null || draft.aircraft != null) {
+            Spacer(Modifier.height(8.dp))
+
+            val flightInfoParts = buildList {
+                // Full flight number (airline + number)
+                if (draft.airline != null && draft.flightNumber != null) {
+                    add("${draft.airline}${draft.flightNumber}")
+                } else if (draft.flightNumber != null) {
+                    add(draft.flightNumber)
+                }
+
+                // Aircraft
+                if (draft.aircraft != null) {
+                    add(draft.aircraft)
+                }
+
+                // Full airline name
+                if (draft.airline != null) {
+                    val airlineName = Airlines.getNameByIcao(draft.airline)
+                    if (airlineName.isNotBlank()) {
+                        add(airlineName)
+                    }
+                }
+            }
+
+            if (flightInfoParts.isNotEmpty()) {
+                Text(
+                    text = flightInfoParts.joinToString(" • "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -782,6 +820,11 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
 @Composable
 private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, tempUnit: TempUnit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        AirlineDropdown(
+            airline = d.airline,
+            onAirlineChange = { onChange(d.copy(airline = it)) },
+            modifier = Modifier.weight(1f)
+        )
         TextFieldSmall(
             "Flight #",
             d.flightNumber.orEmpty(),
@@ -789,6 +832,9 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
             Modifier.weight(1f),
             capitalization = KeyboardCapitalization.Characters
         )
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextFieldSmall(
             "Aircraft",
             d.aircraft.orEmpty(),
@@ -796,6 +842,7 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
             Modifier.weight(1f),
             capitalization = KeyboardCapitalization.Characters
         )
+        Spacer(Modifier.weight(1f))  // Fill empty space
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -1131,7 +1178,8 @@ private fun IdentityStrip(
     pilotId: String,
     pilotName: String,
     hub: String,
-    lastLanded: String
+    lastLanded: String,
+    currentFlight: FlightDraft? = null  // ← ADD PARAMETER
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -1148,6 +1196,39 @@ private fun IdentityStrip(
                 text = "Hub: $hub • Last landed: $lastLanded",
                 style = MaterialTheme.typography.bodyMedium
             )
+
+            // Show current flight info if available
+            if (currentFlight != null) {
+                val flightInfoParts = buildList {
+                    // Full flight number (airline + number)
+                    if (currentFlight.airline != null && currentFlight.flightNumber != null) {
+                        add("${currentFlight.airline}${currentFlight.flightNumber}")
+                    } else if (currentFlight.flightNumber != null) {
+                        add(currentFlight.flightNumber)
+                    }
+
+                    // Aircraft
+                    if (currentFlight.aircraft != null) {
+                        add(currentFlight.aircraft)
+                    }
+
+                    // Full airline name
+                    if (currentFlight.airline != null) {
+                        val airlineName = Airlines.getNameByIcao(currentFlight.airline)
+                        if (airlineName.isNotBlank()) {
+                            add(airlineName)
+                        }
+                    }
+                }
+
+                if (flightInfoParts.isNotEmpty()) {
+                    Text(
+                        text = "Current Flight: ${flightInfoParts.joinToString(" • ")}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }
@@ -1324,6 +1405,66 @@ private fun FlightTypeDropdown(
                     text = { Text(type.displayName()) },
                     onClick = {
                         onFlightTypeChange(type)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AirlineDropdown(
+    airline: String?,
+    onAirlineChange: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = airline ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Airline") },
+            placeholder = { Text("Select") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            // Add "None" option at the top
+            DropdownMenuItem(
+                text = { Text("None") },
+                onClick = {
+                    onAirlineChange(null)
+                    expanded = false
+                }
+            )
+
+            // Show all airlines
+            Airlines.ALL.forEach { airlineItem ->
+                DropdownMenuItem(
+                    text = { Text("${airlineItem.icao} - ${airlineItem.name}") },
+                    onClick = {
+                        onAirlineChange(airlineItem.icao)
                         expanded = false
                     }
                 )

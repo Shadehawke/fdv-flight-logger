@@ -35,6 +35,7 @@ class FlightLogRepository(context: Context) {
             arrFlaps = draft.arrFlaps,
 
             flightNumber = draft.flightNumber,
+            airline = draft.airline,
             aircraft = draft.aircraft,
             fuel = draft.fuel,
             pax = draft.pax,

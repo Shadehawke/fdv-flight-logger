@@ -27,6 +27,7 @@ fun FlightLogEntity.toDraft(): FlightDraft = FlightDraft(
     arrFlaps = arrFlaps,
 
     flightNumber = flightNumber,
+    airline = airline,
     aircraft = aircraft,
     fuel = fuel,
     pax = pax,

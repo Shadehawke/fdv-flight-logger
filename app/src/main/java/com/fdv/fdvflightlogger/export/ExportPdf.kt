@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
+import com.fdv.fdvflightlogger.data.Airlines
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import java.time.Instant
 import java.time.ZoneId
@@ -260,6 +261,22 @@ object ExportPdf {
         val date = dateFmt.format(Instant.ofEpochMilli(f.createdAtEpochMs))
 
         val notes = buildString {
+            if (!f.airline.isNullOrBlank() && !f.flightNumber.isNullOrBlank()) {
+                append("${f.airline}${f.flightNumber}")
+            } else if (!f.flightNumber.isNullOrBlank()) {
+                append(f.flightNumber)
+            }
+
+            if (!f.airline.isNullOrBlank()) {
+                val airlineName = Airlines.getNameByIcao(f.airline)
+                if (airlineName.isNotBlank()) {
+                    if (isNotEmpty()) append(")")
+                    append(airlineName)
+                    if (isNotEmpty()) append(")")
+                }
+            }
+
+            if (isNotEmpty()) append(" | ")
             append(f.flightType.replace("_", " "))
 
             if (!f.scratchpad.isNullOrBlank()) {
