@@ -27,6 +27,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.draw.drawBehind
 
 @Immutable
 data class RaisedColors(
@@ -138,6 +142,92 @@ fun GradientButton(
             text = text,
             style = MaterialTheme.typography.titleSmall,
             color = if (enabled) Color.White else cs.onSurface.copy(alpha = 0.38f)
+        )
+    }
+}
+
+/** Shared shape for all inset input fields. */
+val FieldShape = RoundedCornerShape(12.dp)
+
+/**
+ * Sunken "well": slightly darker than the surface, with a soft inner shadow
+ * on the top and left edges and a faint light rim along the bottom.
+ */
+fun Modifier.inset(colors: RaisedColors, cornerRadius: Dp = 12.dp): Modifier {
+    val shape = RoundedCornerShape(cornerRadius)
+    return this
+        .clip(shape)
+        .background(lerp(colors.base, colors.shadow, 0.10f))
+        .drawBehind {
+            val depth = 6.dp.toPx()
+            drawRect(
+                Brush.verticalGradient(
+                    listOf(colors.shadow.copy(alpha = 0.45f), Color.Transparent),
+                    startY = 0f, endY = depth
+                )
+            )
+            drawRect(
+                Brush.horizontalGradient(
+                    listOf(colors.shadow.copy(alpha = 0.30f), Color.Transparent),
+                    startX = 0f, endX = depth
+                )
+            )
+        }
+        .border(1.dp, Brush.verticalGradient(listOf(Color.Transparent, colors.rim)), shape)
+}
+
+/**
+ * Field colors for inset wells: no fill (the well draws it), no resting underline,
+ * brand-colored underline and label only while focused.
+ */
+@Composable
+fun fdvFieldColors(): TextFieldColors {
+    val cs = MaterialTheme.colorScheme
+    return TextFieldDefaults.colors(
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
+        disabledContainerColor = Color.Transparent,
+        focusedIndicatorColor = cs.secondary,
+        unfocusedIndicatorColor = Color.Transparent,
+        disabledIndicatorColor = Color.Transparent,
+        focusedLabelColor = cs.secondary,
+        cursorColor = cs.secondary
+    )
+}
+
+/**
+ * Section navigation chip: gradient pill with glow when selected,
+ * small raised pill when not.
+ */
+@Composable
+fun SectionChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    val raised = raisedColors()
+    val shape = RoundedCornerShape(50)
+
+    val surface = if (selected) {
+        Modifier
+            .shadow(8.dp, shape, ambientColor = cs.primary, spotColor = cs.primary)
+            .clip(shape)
+            .background(Brush.horizontalGradient(listOf(cs.primary, cs.secondary)))
+    } else {
+        Modifier.raised(raised, cornerRadius = 50.dp, elevation = 3.dp)
+    }
+
+    Box(
+        modifier = surface
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) Color.White else cs.onSurface
         )
     }
 }

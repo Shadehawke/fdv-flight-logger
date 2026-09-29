@@ -31,16 +31,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -69,23 +66,27 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.fdv.fdvflightlogger.data.Airlines
+import com.fdv.fdvflightlogger.data.aircraft.AircraftTypes
+import com.fdv.fdvflightlogger.data.airports.AirportRepository
 import com.fdv.fdvflightlogger.data.db.FlightType
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.mappers.toDraft
 import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
-import kotlinx.coroutines.delay
-import androidx.compose.ui.text.style.TextOverflow
-import com.fdv.fdvflightlogger.data.airports.AirportRepository
-import com.fdv.fdvflightlogger.data.aircraft.AircraftTypes
+import com.fdv.fdvflightlogger.ui.theme.FieldShape
 import com.fdv.fdvflightlogger.ui.theme.GradientButton
+import com.fdv.fdvflightlogger.ui.theme.SectionChip
+import com.fdv.fdvflightlogger.ui.theme.fdvFieldColors
+import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
+import kotlinx.coroutines.delay
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -102,95 +103,98 @@ private fun rememberWindowWidthClass(): WindowWidthSizeClass {
     // calculateWindowSizeClass is @Composable, so call it directly here (NOT inside remember {})
     return calculateWindowSizeClass(activity).widthSizeClass
 }
+
+// Save and restore order MUST match index-for-index, or fields shift on rotation/process death.
 private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
     save = { d ->
         listOf(
-            d.id?.toString() ?: "",
-            d.dep,
-            d.arr,
-            d.flightType.name,
-            d.depRwy ?: "",
-            d.depGate ?: "",
-            d.sid ?: "",
-            d.cruiseFl ?: "",
-            d.depFlaps ?: "",
-            d.v2 ?: "",
-            d.route ?: "",
-            d.depQnh ?: "",
+            d.id?.toString() ?: "",   // 0
+            d.dep,                    // 1
+            d.arr,                    // 2
+            d.flightType.name,        // 3
+            d.depRwy ?: "",           // 4
+            d.depGate ?: "",          // 5
+            d.sid ?: "",              // 6
+            d.cruiseFl ?: "",         // 7
+            d.depFlaps ?: "",         // 8
+            d.v2 ?: "",               // 9
+            d.route ?: "",            // 10
+            d.depQnh ?: "",           // 11
 
-            d.arrRwy ?: "",
-            d.arrGate ?: "",
-            d.star ?: "",
-            d.altn ?: "",
-            d.qnh ?: "",
-            d.vref ?: "",
-            d.arrFlaps ?: "",
+            d.arrRwy ?: "",           // 12
+            d.arrGate ?: "",          // 13
+            d.star ?: "",             // 14
+            d.altn ?: "",             // 15
+            d.qnh ?: "",              // 16
+            d.vref ?: "",             // 17
+            d.arrFlaps ?: "",         // 18
 
-            d.flightNumber ?: "",
-            d.airline ?: "",
-            d.aircraft ?: "",
-            d.fuel ?: "",
-            d.pax ?: "",
-            d.payload ?: "",
-            d.airTime ?: "",
-            d.blockTime ?: "",
-            d.costIndex ?: "",
-            d.reserveFuel ?: "",
-            d.zfw ?: "",
-            d.crzWind ?: "",
-            d.crzOat ?: "",
-            d.info ?: "",
-            d.initAlt ?: "",
-            d.squawk ?: "",
-            d.scratchpad ?: ""
+            d.flightNumber ?: "",     // 19
+            d.airline ?: "",          // 20
+            d.aircraft ?: "",         // 21
+            d.fuel ?: "",             // 22
+            d.pax ?: "",              // 23
+            d.payload ?: "",          // 24
+            d.airTime ?: "",          // 25
+            d.blockTime ?: "",        // 26
+            d.costIndex ?: "",        // 27
+            d.reserveFuel ?: "",      // 28
+            d.zfw ?: "",              // 29
+            d.crzWind ?: "",          // 30
+            d.crzOat ?: "",           // 31
+            d.info ?: "",             // 32
+            d.initAlt ?: "",          // 33
+            d.squawk ?: "",           // 34
+            d.scratchpad ?: ""        // 35
         )
     },
     restore = { raw ->
         val v = raw as List<*>
+        fun s(i: Int): String? = (v[i] as? String)?.takeIf { it.isNotBlank() }
 
         FlightDraft(
-            id = (v[0] as? String)?.takeIf { it.isNotBlank() }?.toLongOrNull(),
+            id = s(0)?.toLongOrNull(),
             dep = v[1] as String,
             arr = v[2] as String,
-            flightType = (v[3] as? String)?.let {
+            flightType = s(3)?.let {
                 runCatching { FlightType.valueOf(it) }.getOrDefault(FlightType.ONLINE)
             } ?: FlightType.ONLINE,
-            depRwy = (v[3] as? String)?.takeIf { it.isNotBlank() },
-            depGate = (v[4] as? String)?.takeIf { it.isNotBlank() },
-            sid = (v[5] as? String)?.takeIf { it.isNotBlank() },
-            cruiseFl = (v[6] as? String)?.takeIf { it.isNotBlank() },
-            depFlaps = (v[7] as? String)?.takeIf { it.isNotBlank() },
-            v2 = (v[8] as? String)?.takeIf { it.isNotBlank() },
-            route = (v[9] as? String)?.takeIf { it.isNotBlank() },
-            depQnh = (v[10] as? String)?.takeIf { it.isNotBlank() },
+            depRwy = s(4),
+            depGate = s(5),
+            sid = s(6),
+            cruiseFl = s(7),
+            depFlaps = s(8),
+            v2 = s(9),
+            route = s(10),
+            depQnh = s(11),
 
-            arrRwy = (v[11] as? String)?.takeIf { it.isNotBlank() },
-            arrGate = (v[12] as? String)?.takeIf { it.isNotBlank() },
-            star = (v[13] as? String)?.takeIf { it.isNotBlank() },
-            altn = (v[14] as? String)?.takeIf { it.isNotBlank() },
-            qnh = (v[15] as? String)?.takeIf { it.isNotBlank() },
-            vref = (v[16] as? String)?.takeIf { it.isNotBlank() },
-            arrFlaps = (v[17] as? String)?.takeIf { it.isNotBlank() },
+            arrRwy = s(12),
+            arrGate = s(13),
+            star = s(14),
+            altn = s(15),
+            qnh = s(16),
+            vref = s(17),
+            arrFlaps = s(18),
 
-            flightNumber = (v[18] as? String)?.takeIf { it.isNotBlank() },
-            airline = (v[19] as? String)?.takeIf { it.isNotBlank() },
-            aircraft = (v[20] as? String)?.takeIf { it.isNotBlank() },
-            fuel = (v[21] as? String)?.takeIf { it.isNotBlank() },
-            pax = (v[22] as? String)?.takeIf { it.isNotBlank() },
-            payload = (v[23] as? String)?.takeIf { it.isNotBlank() },
-            airTime = (v[24] as? String)?.takeIf { it.isNotBlank() },
-            blockTime = (v[25] as? String)?.takeIf { it.isNotBlank() },
-            costIndex = (v[26] as? String)?.takeIf { it.isNotBlank() },
-            reserveFuel = (v[27] as? String)?.takeIf { it.isNotBlank() },
-            zfw = (v[28] as? String)?.takeIf { it.isNotBlank() },
-            crzWind = (v[29] as? String)?.takeIf { it.isNotBlank() },
-            crzOat = (v[30] as? String)?.takeIf { it.isNotBlank() },
+            flightNumber = s(19),
+            airline = s(20),
+            aircraft = s(21),
+            fuel = s(22),
+            pax = s(23),
+            payload = s(24),
+            airTime = s(25),
+            blockTime = s(26),
+            costIndex = s(27),
+            reserveFuel = s(28),
+            zfw = s(29),
+            crzWind = s(30),
+            crzOat = s(31),
 
-            info = (v[31] as? String)?.takeIf { it.isNotBlank() },
-            initAlt = (v[32] as? String)?.takeIf { it.isNotBlank() },
-            squawk = (v[33] as? String)?.takeIf { it.isNotBlank() },
+            info = s(32),
+            initAlt = s(33),
+            squawk = s(34),
 
-            scratchpad = (v[34] as? String)?.takeIf { it.isNotBlank() }
+            scratchpad = s(35)
         )
     }
 )
@@ -255,7 +259,7 @@ fun FlightLogScreen(
             if (draft.dep.isNotBlank() && draft.arr.isNotBlank()) {
                 appViewModel.saveFlight(draft)
 
-                // If this was a new flight (no ID), get the auto-generated ID
+                // New flight: adopt the generated ID so later saves update instead of insert
                 if (draft.id == null) {
                     val saved = appViewModel.getLatestFlight()
                     if (saved != null) {
@@ -408,60 +412,20 @@ private fun CompactSingleColumnLayout(
         // Scrollable section content
         Column(
             modifier = Modifier
-                .weight(1f)  // ← Takes remaining space, allows scroll
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 16.dp)
+                .padding(top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Always show route header (DEP → ARR)
             RouteHeader(draft, onDraftChange)
 
-            // Show active section only
-            when (activeSection) {
-                FlightSection.DEPARTURE -> {
-                    SectionCard(title = "Departure + Enroute") {
-                        DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
-                    }
-                }
-
-                FlightSection.ARRIVAL -> {
-                    SectionCard(title = "Arrival") {
-                        ArrivalFields(draft, onDraftChange, qnhUnit)
-                    }
-                }
-
-                FlightSection.AIRCRAFT -> {
-                    SectionCard(title = "Aircraft + Performance") {
-                        AircraftPerfFields(draft, onDraftChange, tempUnit)
-                    }
-                }
-
-                FlightSection.ATC -> {
-                    SectionCard(title = "ATC") {
-                        AtcFields(
-                            info = draft.info,
-                            initAlt = draft.initAlt,
-                            squawk = draft.squawk,
-                            onInfoChange = { onDraftChange(draft.copy(info = it)) },
-                            onInitAltChange = { onDraftChange(draft.copy(initAlt = it)) },
-                            onSquawkChange = { onDraftChange(draft.copy(squawk = it)) }
-                        )
-                    }
-                }
-            }
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection)
 
             Spacer(Modifier.height(8.dp))
         }
 
-        SectionCard(
-            title = "Scratchpad",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            NotesField(
-                value = draft.scratchpad.orEmpty(),
-                onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
-            )
-        }
+        ScratchpadCard(draft, onDraftChange)
     }
 }
 
@@ -471,12 +435,11 @@ private fun MediumTwoColumnLayout(
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
-    activeSection: FlightSection  // ← ADD PARAMETER
+    activeSection: FlightSection
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Scrollable content area
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -485,52 +448,10 @@ private fun MediumTwoColumnLayout(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             RouteHeader(draft, onDraftChange)
-
-            // Show active section only
-            when (activeSection) {
-                FlightSection.DEPARTURE -> {
-                    SectionCard(title = "Departure + Enroute") {
-                        DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
-                    }
-                }
-
-                FlightSection.ARRIVAL -> {
-                    SectionCard(title = "Arrival") {
-                        ArrivalFields(draft, onDraftChange, qnhUnit)
-                    }
-                }
-
-                FlightSection.AIRCRAFT -> {
-                    SectionCard(title = "Aircraft + Performance") {
-                        AircraftPerfFields(draft, onDraftChange, tempUnit)
-                    }
-                }
-
-                FlightSection.ATC -> {
-                    SectionCard(title = "ATC") {
-                        AtcFields(
-                            info = draft.info,
-                            initAlt = draft.initAlt,
-                            squawk = draft.squawk,
-                            onInfoChange = { onDraftChange(draft.copy(info = it)) },
-                            onInitAltChange = { onDraftChange(draft.copy(initAlt = it)) },
-                            onSquawkChange = { onDraftChange(draft.copy(squawk = it)) }
-                        )
-                    }
-                }
-            }
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection)
         }
 
-        // Fixed scratchpad at bottom
-        SectionCard(
-            title = "Scratchpad",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            NotesField(
-                value = draft.scratchpad.orEmpty(),
-                onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
-            )
-        }
+        ScratchpadCard(draft, onDraftChange)
     }
 }
 
@@ -540,12 +461,11 @@ private fun ExpandedWhiteboardLayout(
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
-    activeSection: FlightSection  // ← ADD PARAMETER
+    activeSection: FlightSection
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Scrollable content area
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -554,52 +474,61 @@ private fun ExpandedWhiteboardLayout(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             RouteHeader(draft, onDraftChange)
-
-            // Show active section only
-            when (activeSection) {
-                FlightSection.DEPARTURE -> {
-                    SectionCard(title = "Departure + Enroute") {
-                        DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
-                    }
-                }
-
-                FlightSection.ARRIVAL -> {
-                    SectionCard(title = "Arrival") {
-                        ArrivalFields(draft, onDraftChange, qnhUnit)
-                    }
-                }
-
-                FlightSection.AIRCRAFT -> {
-                    SectionCard(title = "Aircraft + Performance") {
-                        AircraftPerfFields(draft, onDraftChange, tempUnit)
-                    }
-                }
-
-                FlightSection.ATC -> {
-                    SectionCard(title = "ATC") {
-                        AtcFields(
-                            info = draft.info,
-                            initAlt = draft.initAlt,
-                            squawk = draft.squawk,
-                            onInfoChange = { onDraftChange(draft.copy(info = it)) },
-                            onInitAltChange = { onDraftChange(draft.copy(initAlt = it)) },
-                            onSquawkChange = { onDraftChange(draft.copy(squawk = it)) }
-                        )
-                    }
-                }
-            }
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection)
         }
 
-        // Fixed scratchpad at bottom
-        SectionCard(
-            title = "Scratchpad",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            NotesField(
-                value = draft.scratchpad.orEmpty(),
-                onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
+        ScratchpadCard(draft, onDraftChange)
+    }
+}
+
+// Shared by all three layouts so a section change only has to be made once.
+@Composable
+private fun ActiveSectionCard(
+    draft: FlightDraft,
+    onDraftChange: (FlightDraft) -> Unit,
+    qnhUnit: QnhUnit,
+    tempUnit: TempUnit,
+    activeSection: FlightSection
+) {
+    when (activeSection) {
+        FlightSection.DEPARTURE -> SectionCard(title = "Departure + Enroute") {
+            DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
+        }
+
+        FlightSection.ARRIVAL -> SectionCard(title = "Arrival") {
+            ArrivalFields(draft, onDraftChange, qnhUnit)
+        }
+
+        FlightSection.AIRCRAFT -> SectionCard(title = "Aircraft + Performance") {
+            AircraftPerfFields(draft, onDraftChange, tempUnit)
+        }
+
+        FlightSection.ATC -> SectionCard(title = "ATC") {
+            AtcFields(
+                info = draft.info,
+                initAlt = draft.initAlt,
+                squawk = draft.squawk,
+                onInfoChange = { onDraftChange(draft.copy(info = it)) },
+                onInitAltChange = { onDraftChange(draft.copy(initAlt = it)) },
+                onSquawkChange = { onDraftChange(draft.copy(squawk = it)) }
             )
         }
+    }
+}
+
+@Composable
+private fun ScratchpadCard(
+    draft: FlightDraft,
+    onDraftChange: (FlightDraft) -> Unit
+) {
+    SectionCard(
+        title = "Scratchpad",
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        NotesField(
+            value = draft.scratchpad.orEmpty(),
+            onChange = { onDraftChange(draft.copy(scratchpad = it.takeIf { s -> s.isNotBlank() })) }
+        )
     }
 }
 
@@ -645,7 +574,6 @@ private fun DepartureEnrouteFields(
     onChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit
 ) {
-    // Flight Type dropdown (full width at top)
     FlightTypeDropdown(
         flightType = draft.flightType,
         onFlightTypeChange = { onChange(draft.copy(flightType = it)) },
@@ -735,16 +663,16 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
         TextFieldSmall(
             "Gate",
             d.arrGate.orEmpty(),
-            { onChange(d.copy(arrGate = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            { onChange(d.copy(arrGate = it.uppercase().takeIf { s -> s.isNotBlank() })) },
             Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+            capitalization = KeyboardCapitalization.Characters
         )
         TextFieldSmall(
             "STAR",
             d.star.orEmpty(),
-            { onChange(d.copy(star = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
+            { onChange(d.copy(star = it.uppercase().takeIf { s -> s.isNotBlank() })) },
             Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+            capitalization = KeyboardCapitalization.Characters
         )
     }
 
@@ -901,7 +829,6 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
             modifier = Modifier.weight(1f)
         )
 
-        // OAT field with unit label
         Row(
             modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -923,8 +850,7 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
                     TempUnit.C -> "°C"
                 },
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)  // Align with text field content
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -955,7 +881,7 @@ class TimeVisualTransformation : VisualTransformation {
                 return when {
                     offset <= 2 -> offset
                     offset == 3 -> 2 // Colon position maps back to position 2
-                    else -> offset - 1 // After colon, subtract 1
+                    else -> offset - 1
                 }
             }
         }
@@ -966,7 +892,7 @@ class TimeVisualTransformation : VisualTransformation {
 
 class CrzWindVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        val digitsOnly = text.text.filter { it.isDigit() }.take(6) // Max 6 digits (XXX/XXX)
+        val digitsOnly = text.text.filter { it.isDigit() }.take(6) // XXX/XXX
 
         val formatted = when {
             digitsOnly.isEmpty() -> ""
@@ -980,29 +906,18 @@ class CrzWindVisualTransformation : VisualTransformation {
 
         val offsetMapping = object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
-                // Original is just digits, transformed has a slash after position 3
                 return when {
                     offset <= 3 -> offset
-                    else -> {
-                        // After position 3, add 1 for the slash
-                        val adjustedOffset = offset + 1
-                        // Don't exceed the formatted text length
-                        adjustedOffset.coerceAtMost(formatted.length)
-                    }
+                    // Leading zeros in speed are trimmed, so clamp to what's actually shown
+                    else -> (offset + 1).coerceAtMost(formatted.length)
                 }
             }
 
             override fun transformedToOriginal(offset: Int): Int {
-                // Transformed has a slash at position 3
                 return when {
                     offset <= 3 -> offset
                     offset == 4 -> 3 // Slash position maps back to position 3
-                    else -> {
-                        // After slash, subtract 1
-                        val adjustedOffset = offset - 1
-                        // Don't exceed the original text length
-                        adjustedOffset.coerceAtMost(digitsOnly.length)
-                    }
+                    else -> (offset - 1).coerceAtMost(digitsOnly.length)
                 }
             }
         }
@@ -1013,7 +928,7 @@ class CrzWindVisualTransformation : VisualTransformation {
 
 class QnhInHgVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        val digitsOnly = text.text.filter { it.isDigit() }.take(4) // Max 4 digits
+        val digitsOnly = text.text.filter { it.isDigit() }.take(4)
 
         val formatted = when {
             digitsOnly.isEmpty() -> ""
@@ -1025,21 +940,15 @@ class QnhInHgVisualTransformation : VisualTransformation {
             override fun originalToTransformed(offset: Int): Int {
                 return when {
                     offset <= 2 -> offset
-                    else -> {
-                        val adjustedOffset = offset + 1 // Account for decimal point
-                        adjustedOffset.coerceAtMost(formatted.length)
-                    }
+                    else -> (offset + 1).coerceAtMost(formatted.length)
                 }
             }
 
             override fun transformedToOriginal(offset: Int): Int {
                 return when {
                     offset <= 2 -> offset
-                    offset == 3 -> 2 // Decimal point position maps back to position 2
-                    else -> {
-                        val adjustedOffset = offset - 1 // After decimal, subtract 1
-                        adjustedOffset.coerceAtMost(digitsOnly.length)
-                    }
+                    offset == 3 -> 2 // Decimal point maps back to position 2
+                    else -> (offset - 1).coerceAtMost(digitsOnly.length)
                 }
             }
         }
@@ -1055,26 +964,19 @@ private fun TimeField(
     onChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = { input ->
-            // Only allow digits, max 4 characters
-            val digitsOnly = input.filter { it.isDigit() }.take(4)
-            onChange(digitsOnly)  // ← Store plain digits, NOT formatted
+            // Store plain digits; the VisualTransformation handles the colon
+            onChange(input.filter { it.isDigit() }.take(4))
         },
         label = { Text(label) },
         singleLine = true,
-        visualTransformation = TimeVisualTransformation(),  // ← ADD THIS LINE
+        visualTransformation = TimeVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-            cursorColor = MaterialTheme.colorScheme.secondary,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier
+        shape = FieldShape,
+        colors = fdvFieldColors(),
+        modifier = modifier.inset(raisedColors())
     )
 }
 
@@ -1084,26 +986,18 @@ private fun CrzWindField(
     onChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = { input ->
-            // Only allow digits, max 6 characters (XXX/XXX)
-            val digitsOnly = input.filter { it.isDigit() }.take(6)
-            onChange(digitsOnly)
+            onChange(input.filter { it.isDigit() }.take(6))
         },
         label = { Text("Crz. Wind") },
         singleLine = true,
         visualTransformation = CrzWindVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-            cursorColor = MaterialTheme.colorScheme.secondary,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier
+        shape = FieldShape,
+        colors = fdvFieldColors(),
+        modifier = modifier.inset(raisedColors())
     )
 }
 
@@ -1115,29 +1009,21 @@ private fun QnhField(
     onChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = { input ->
-            // Only allow digits, max 4 characters
-            val digitsOnly = input.filter { it.isDigit() }.take(4)
-            onChange(digitsOnly)
+            onChange(input.filter { it.isDigit() }.take(4))
         },
         label = { Text(label) },
         singleLine = true,
         visualTransformation = when (qnhUnit) {
-            QnhUnit.INHG -> QnhInHgVisualTransformation()  // Show XX.XX for inHg
-            QnhUnit.HPA -> VisualTransformation.None  // Show XXXX for hPa (no decimal)
+            QnhUnit.INHG -> QnhInHgVisualTransformation() // XX.XX
+            QnhUnit.HPA -> VisualTransformation.None      // XXXX
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-            cursorColor = MaterialTheme.colorScheme.secondary,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier
+        shape = FieldShape,
+        colors = fdvFieldColors(),
+        modifier = modifier.inset(raisedColors())
     )
 }
 
@@ -1147,38 +1033,35 @@ private fun IdentityStrip(
     pilotName: String,
     hub: String,
     lastLanded: String,
-    currentFlight: FlightDraft? = null  // ← ADD PARAMETER
+    currentFlight: FlightDraft? = null
 ) {
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .fillMaxWidth()
             .raised(raisedColors())
-            .padding(12.dp),
+            .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = "Pilot: $pilotId • $pilotName",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = "Hub: $hub • Last landed: $lastLanded",
-                style = MaterialTheme.typography.bodyMedium
-            )
+        Text(
+            text = "Pilot: $pilotId • $pilotName",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            text = "Hub: $hub • Last landed: $lastLanded",
+            style = MaterialTheme.typography.bodyMedium
+        )
 
-            // Show current flight info if available
-            if (currentFlight != null) {
-                val info = Airlines.formatFlightInfo(
-                    currentFlight.airline, currentFlight.flightNumber, currentFlight.aircraft
+        if (currentFlight != null) {
+            val info = Airlines.formatFlightInfo(
+                currentFlight.airline, currentFlight.flightNumber, currentFlight.aircraft
+            )
+            if (info.isNotEmpty()) {
+                Text(
+                    text = "Current Flight: $info",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                if (info.isNotEmpty()) {
-                    Text(
-                        text = "Current Flight: $info",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
             }
         }
     }
@@ -1194,38 +1077,34 @@ private fun SectionJumpChips(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Extra vertical room so the raised shadows/glow aren't clipped by the scroll row
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        FilterChip(
+        SectionChip(
+            label = "Departure",
             selected = activeSection == FlightSection.DEPARTURE,
-            onClick = { onSectionClick(FlightSection.DEPARTURE) },
-            label = { Text("Departure") }
+            onClick = { onSectionClick(FlightSection.DEPARTURE) }
         )
-
-        FilterChip(
+        SectionChip(
+            label = "Arrival",
             selected = activeSection == FlightSection.ARRIVAL,
-            onClick = { onSectionClick(FlightSection.ARRIVAL) },
-            label = { Text("Arrival") }
+            onClick = { onSectionClick(FlightSection.ARRIVAL) }
         )
-
-        FilterChip(
+        SectionChip(
+            label = "Aircraft",
             selected = activeSection == FlightSection.AIRCRAFT,
-            onClick = { onSectionClick(FlightSection.AIRCRAFT) },
-            label = { Text("Aircraft") }
+            onClick = { onSectionClick(FlightSection.AIRCRAFT) }
         )
-
-        // Only show ATC chip if flight type requires it
         if (showAtc) {
-            FilterChip(
+            SectionChip(
+                label = "ATC",
                 selected = activeSection == FlightSection.ATC,
-                onClick = { onSectionClick(FlightSection.ATC) },
-                label = { Text("ATC") }
+                onClick = { onSectionClick(FlightSection.ATC) }
             )
         }
     }
 }
-
 
 @Composable
 private fun RightEdgeFadeWithChevron(modifier: Modifier = Modifier) {
@@ -1233,13 +1112,10 @@ private fun RightEdgeFadeWithChevron(modifier: Modifier = Modifier) {
     val fadeWidth = 28.dp
 
     Box(
-        modifier = modifier
-            .graphicsLayer { }
-            .padding(end = 0.dp)
+        modifier = modifier.graphicsLayer { }
     ) {
         androidx.compose.foundation.Canvas(
             modifier = Modifier
-                .padding(end = 0.dp)
                 .align(Alignment.CenterEnd)
                 .width(fadeWidth)
                 .height(36.dp)
@@ -1289,7 +1165,7 @@ private fun TextFieldSmall(
     keyboardType: KeyboardType = KeyboardType.Text,
     capitalization: KeyboardCapitalization = KeyboardCapitalization.None
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
@@ -1298,15 +1174,9 @@ private fun TextFieldSmall(
             keyboardType = keyboardType,
             capitalization = capitalization
         ),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.secondary,   // red accent
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-            cursorColor = MaterialTheme.colorScheme.secondary,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier
+        shape = FieldShape,
+        colors = fdvFieldColors(),
+        modifier = modifier.inset(raisedColors())
     )
 }
 
@@ -1324,22 +1194,18 @@ private fun FlightTypeDropdown(
         onExpandedChange = { expanded = !expanded },
         modifier = modifier
     ) {
-        OutlinedTextField(
+        TextField(
             value = flightType.displayName(),
             onValueChange = {},
             readOnly = true,
             label = { Text("Flight Type") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-            ),
+            shape = FieldShape,
+            colors = fdvFieldColors(),
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .inset(raisedColors())
         )
 
         ExposedDropdownMenu(
@@ -1383,11 +1249,11 @@ private fun <T> AutocompleteField(
         onExpandedChange = { expanded = it },
         modifier = modifier
     ) {
-        OutlinedTextField(
+        TextField(
             value = value,
             onValueChange = {
                 onValueChange(it)
-                expanded = true   // Reopen suggestions on every edit
+                expanded = true // Reopen suggestions on every edit
             },
             label = { Text(label) },
             singleLine = true,
@@ -1398,18 +1264,13 @@ private fun <T> AutocompleteField(
                 keyboardType = keyboardType,
                 capitalization = KeyboardCapitalization.Characters
             ),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                cursorColor = MaterialTheme.colorScheme.secondary,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-            ),
+            shape = FieldShape,
+            colors = fdvFieldColors(),
             modifier = Modifier
                 .fillMaxWidth()
                 // PrimaryEditable keeps the keyboard open while the menu shows
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                .inset(raisedColors())
         )
 
         ExposedDropdownMenu(
@@ -1560,30 +1421,25 @@ private fun AirlineDropdown(
         onExpandedChange = { expanded = !expanded },
         modifier = modifier
     ) {
-        OutlinedTextField(
+        TextField(
             value = airline ?: "",
             onValueChange = {},
             readOnly = true,
             label = { Text("Airline") },
             placeholder = { Text("Select") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-            ),
+            shape = FieldShape,
+            colors = fdvFieldColors(),
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .inset(raisedColors())
         )
 
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            // Add "None" option at the top
             DropdownMenuItem(
                 text = { Text("None") },
                 onClick = {
@@ -1592,7 +1448,6 @@ private fun AirlineDropdown(
                 }
             )
 
-            // Show all airlines
             Airlines.ALL.forEach { airlineItem ->
                 DropdownMenuItem(
                     text = { Text("${airlineItem.icao} - ${airlineItem.name}") },
@@ -1612,20 +1467,16 @@ private fun RouteTextField(
     onChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onChange,
         label = { Text("Route") },
         minLines = 2,
-        modifier = modifier.fillMaxWidth(),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-            cursorColor = MaterialTheme.colorScheme.secondary,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        )
+        shape = FieldShape,
+        colors = fdvFieldColors(),
+        modifier = modifier
+            .fillMaxWidth()
+            .inset(raisedColors())
     )
 }
 
@@ -1635,62 +1486,17 @@ private fun NotesField(
     onChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onChange,
         label = { Text("Notes / Taxi / Clearance") },
         minLines = 4,
-        modifier = modifier.fillMaxWidth(),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-            cursorColor = MaterialTheme.colorScheme.secondary,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        )
+        shape = FieldShape,
+        colors = fdvFieldColors(),
+        modifier = modifier
+            .fillMaxWidth()
+            .inset(raisedColors())
     )
-}
-
-@Composable
-private fun AtcStrip(
-    info: String?,
-    initAlt: String?,
-    squawk: String?,
-    onInfoChange: (String?) -> Unit,
-    onInitAltChange: (String?) -> Unit,
-    onSquawkChange: (String?) -> Unit
-) {
-    Surface(tonalElevation = 2.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            TextFieldSmall(
-                label = "Info",
-                value = info.orEmpty(),
-                onChange = { onInfoChange(it.takeIf { s -> s.isNotBlank() }) },
-                modifier = Modifier.weight(1f),
-                capitalization = KeyboardCapitalization.Characters
-            )
-            TextFieldSmall(
-                label = "Init. Alt.",
-                value = initAlt.orEmpty(),
-                onChange = { onInitAltChange(it.takeIf { s -> s.isNotBlank() }) },
-                modifier = Modifier.weight(1f),
-                keyboardType = KeyboardType.Number
-            )
-            TextFieldSmall(
-                label = "Sqwk",
-                value = squawk.orEmpty(),
-                onChange = { onSquawkChange(it.takeIf { s -> s.isNotBlank() }) },
-                modifier = Modifier.weight(1f),
-                keyboardType = KeyboardType.Number
-            )
-        }
-    }
 }
 
 @Composable
@@ -1776,16 +1582,13 @@ private fun validateNumeric(input: String, allowDecimal: Boolean = false): Strin
 
 /**
  * Formats time input as HH:MM
- * Handles cursor position to prevent digit reversal
  */
 private fun formatTime(input: String): String {
-    // Remove everything except digits
     val digitsOnly = input.filter { it.isDigit() }
 
     return when {
         digitsOnly.isEmpty() -> ""
-        digitsOnly.length == 1 -> digitsOnly
-        digitsOnly.length == 2 -> digitsOnly
+        digitsOnly.length <= 2 -> digitsOnly
         digitsOnly.length == 3 -> "${digitsOnly.take(2)}:${digitsOnly.drop(2)}"
         else -> "${digitsOnly.take(2)}:${digitsOnly.drop(2).take(2)}"
     }
@@ -1801,7 +1604,6 @@ private fun formatQnh(input: String, unit: QnhUnit): String {
 
     return when (unit) {
         QnhUnit.INHG -> {
-            // Format as xx.xx (max 5 chars: 29.92)
             val parts = digitsOnly.split('.')
             val whole = parts[0].take(2)
             val decimal = parts.getOrNull(1)?.take(2) ?: ""
@@ -1814,33 +1616,22 @@ private fun formatQnh(input: String, unit: QnhUnit): String {
                 whole
             }
         }
-        QnhUnit.HPA -> {
-            // Format as xxxx (integers only, max 4 digits: 1013)
-            digitsOnly.filter { it.isDigit() }.take(4)
-        }
+        QnhUnit.HPA -> digitsOnly.filter { it.isDigit() }.take(4)
     }
 }
 
 /**
- * Formats temperature as integer with optional minus sign
- * Rounds decimals (e.g., -15.7 → -16, 15.3 → 15)
- * Examples: -15, 0, 23
+ * Formats temperature as integer with optional minus sign.
+ * Truncates decimals toward zero (e.g., -15.7 → -15, 15.3 → 15).
  */
 private fun formatTemperature(input: String): String {
-    // Allow digits, minus sign, and decimal point (for intermediate input)
     val cleaned = input.filter { it.isDigit() || it == '-' || it == '.' }
 
-    // If empty or just a minus sign, return as-is
     if (cleaned.isEmpty() || cleaned == "-") return cleaned
 
-    // Try to parse and round
     return try {
-        val value = cleaned.toDouble()
-        value.toInt().toString()  // Rounds toward zero by default
+        cleaned.toDouble().toInt().toString()
     } catch (_: NumberFormatException) {
         cleaned.filter { it.isDigit() || it == '-' }.take(4)
     }
 }
-
-
-
