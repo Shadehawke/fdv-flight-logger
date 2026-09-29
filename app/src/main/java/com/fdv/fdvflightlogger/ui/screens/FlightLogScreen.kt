@@ -627,38 +627,14 @@ private fun RouteHeader(
             )
         }
 
-        if (draft.airline != null || draft.flightNumber != null || draft.aircraft != null) {
+        val info = Airlines.formatFlightInfo(draft.airline, draft.flightNumber, draft.aircraft)
+        if (info.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-
-            val flightInfoParts = buildList {
-                // Full flight number (airline + number)
-                if (draft.airline != null && draft.flightNumber != null) {
-                    add("${draft.airline}${draft.flightNumber}")
-                } else if (draft.flightNumber != null) {
-                    add(draft.flightNumber)
-                }
-
-                // Aircraft
-                if (draft.aircraft != null) {
-                    add(draft.aircraft)
-                }
-
-                // Full airline name
-                if (draft.airline != null) {
-                    val airlineName = Airlines.getNameByIcao(draft.airline)
-                    if (airlineName.isNotBlank()) {
-                        add(airlineName)
-                    }
-                }
-            }
-
-            if (flightInfoParts.isNotEmpty()) {
-                Text(
-                    text = flightInfoParts.joinToString(" • "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = info,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -1199,31 +1175,12 @@ private fun IdentityStrip(
 
             // Show current flight info if available
             if (currentFlight != null) {
-                val flightInfoParts = buildList {
-                    // Full flight number (airline + number)
-                    if (currentFlight.airline != null && currentFlight.flightNumber != null) {
-                        add("${currentFlight.airline}${currentFlight.flightNumber}")
-                    } else if (currentFlight.flightNumber != null) {
-                        add(currentFlight.flightNumber)
-                    }
-
-                    // Aircraft
-                    if (currentFlight.aircraft != null) {
-                        add(currentFlight.aircraft)
-                    }
-
-                    // Full airline name
-                    if (currentFlight.airline != null) {
-                        val airlineName = Airlines.getNameByIcao(currentFlight.airline)
-                        if (airlineName.isNotBlank()) {
-                            add(airlineName)
-                        }
-                    }
-                }
-
-                if (flightInfoParts.isNotEmpty()) {
+                val info = Airlines.formatFlightInfo(
+                    currentFlight.airline, currentFlight.flightNumber, currentFlight.aircraft
+                )
+                if (info.isNotEmpty()) {
                     Text(
-                        text = "Current Flight: ${flightInfoParts.joinToString(" • ")}",
+                        text = "Current Flight: $info",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )

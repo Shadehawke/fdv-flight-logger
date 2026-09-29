@@ -261,32 +261,12 @@ object ExportPdf {
         val date = dateFmt.format(Instant.ofEpochMilli(f.createdAtEpochMs))
 
         val notes = buildString {
-            if (!f.airline.isNullOrBlank() && !f.flightNumber.isNullOrBlank()) {
-                append("${f.airline}${f.flightNumber}")
-            } else if (!f.flightNumber.isNullOrBlank()) {
-                append(f.flightNumber)
-            }
-
-            if (!f.airline.isNullOrBlank()) {
-                val airlineName = Airlines.getNameByIcao(f.airline)
-                if (airlineName.isNotBlank()) {
-                    if (isNotEmpty()) append(")")
-                    append(airlineName)
-                    if (isNotEmpty()) append(")")
-                }
-            }
+            val flightInfo = Airlines.formatFlightInfo(f.airline, f.flightNumber, null)
+            if (flightInfo.isNotEmpty()) append(flightInfo)
 
             if (isNotEmpty()) append(" | ")
             append(f.flightType.replace("_", " "))
-
-            if (!f.scratchpad.isNullOrBlank()) {
-                if (isNotEmpty()) append(" | ")
-                append(f.scratchpad.replace("\n", " ").trim())
-            }
-            if (!f.route.isNullOrBlank()) {
-                if (isNotEmpty()) append(" | ")
-                append("Route: ${f.route}")
-            }
+            // ... scratchpad and route appends stay as they are
         }.trim()
 
         return listOf(

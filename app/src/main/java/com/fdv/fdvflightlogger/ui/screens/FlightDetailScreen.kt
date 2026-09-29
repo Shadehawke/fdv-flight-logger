@@ -175,33 +175,9 @@ private fun FlightDetailContent(
                 )
 
                 // Build flight info: Full flight number • Aircraft • Airline name
-                val flightInfoParts = buildList {
-                    // Full flight number (airline + number)
-                    if (!flight.airline.isNullOrBlank() && !flight.flightNumber.isNullOrBlank()) {
-                        add("${flight.airline}${flight.flightNumber}")
-                    } else if (!flight.flightNumber.isNullOrBlank()) {
-                        add(flight.flightNumber)
-                    }
-
-                    // Aircraft
-                    if (!flight.aircraft.isNullOrBlank()) {
-                        add(flight.aircraft)
-                    }
-
-                    // Full airline name
-                    if (!flight.airline.isNullOrBlank()) {
-                        val airlineName = Airlines.getNameByIcao(flight.airline)
-                        if (airlineName.isNotBlank()) {
-                            add(airlineName)
-                        }
-                    }
-                }
-
-                if (flightInfoParts.isNotEmpty()) {
-                    Text(
-                        text = flightInfoParts.joinToString(" • "),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                val info = Airlines.formatFlightInfo(flight.airline, flight.flightNumber, flight.aircraft)
+                if (info.isNotEmpty()) {
+                    Text(info, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
