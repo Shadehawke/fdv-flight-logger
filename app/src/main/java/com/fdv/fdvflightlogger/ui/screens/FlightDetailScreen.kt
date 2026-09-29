@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,17 +17,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,12 +36,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.fdv.fdvflightlogger.data.Airlines
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightType
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
+import com.fdv.fdvflightlogger.ui.theme.inset
+import com.fdv.fdvflightlogger.ui.theme.raised
+import com.fdv.fdvflightlogger.ui.theme.raisedColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +74,12 @@ fun FlightDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Flight Detail") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = DeltaBlue,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -129,16 +141,16 @@ fun FlightDetailScreen(
             title = { Text("Delete flight?") },
             text = { Text("This action cannot be undone.") },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
                         confirmDelete.value = false
                         flight?.let { appViewModel.deleteFlight(it) }
                         navController.popBackStack()
                     }
-                ) { Text("Delete") }
+                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                Button(onClick = { confirmDelete.value = false }) { Text("Cancel") }
+                TextButton(onClick = { confirmDelete.value = false }) { Text("Cancel") }
             }
         )
     }
@@ -156,37 +168,37 @@ private fun FlightDetailContent(
             .fillMaxSize()
             .verticalScroll(scroll)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        ElevatedCard(Modifier.fillMaxWidth()) {
-            Column(
-                Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text("${flight.dep} → ${flight.arr}", style = MaterialTheme.typography.titleLarge)
+        // Header card mirrors the log screen's IdentityStrip
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .raised(raisedColors())
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text("${flight.dep} → ${flight.arr}", style = MaterialTheme.typography.titleLarge)
 
-                // Flight Type
-                Text(
-                    text = runCatching {
-                        FlightType.valueOf(flight.flightType).displayName()
-                    }.getOrDefault("Online"),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            Text(
+                text = runCatching {
+                    FlightType.valueOf(flight.flightType).displayName()
+                }.getOrDefault("Online"),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-                // Build flight info: Full flight number • Aircraft • Airline name
-                val info = Airlines.formatFlightInfo(flight.airline, flight.flightNumber, flight.aircraft)
-                if (info.isNotEmpty()) {
-                    Text(info, style = MaterialTheme.typography.bodyMedium)
-                }
+            val info = Airlines.formatFlightInfo(flight.airline, flight.flightNumber, flight.aircraft)
+            if (info.isNotEmpty()) {
+                Text(info, style = MaterialTheme.typography.bodyMedium)
             }
         }
 
         SectionCard("Departure + Enroute") {
             ReadRow("RWY", flight.depRwy.orEmpty(), "Gate", flight.depGate.orEmpty(), "SID", flight.sid.orEmpty())
             ReadRow("Cruise (FL)", flight.cruiseFl.orEmpty(), "Flaps", flight.depFlaps.orEmpty(), "V2", flight.v2.orEmpty())
-            ReadBlock("Route", flight.route.orEmpty())
             ReadRow("Dep QNH", flight.depQnh.orEmpty(), "", "", "", "")
+            ReadBlock("Route", flight.route.orEmpty())
         }
 
         SectionCard("Arrival") {
@@ -214,14 +226,15 @@ private fun FlightDetailContent(
 
 @Composable
 private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    ElevatedCard(Modifier.fillMaxWidth()) {
-        Column(
-            Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            content()
-        }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .raised(raisedColors())
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium)
+        content()
     }
 }
 
@@ -236,37 +249,59 @@ private fun ReadRow(
         modifier = Modifier.fillMaxWidth()
     ) {
         ReadField(l1, v1, Modifier.weight(1f))
-        ReadField(l2, v2, Modifier.weight(1f))
-        if (l3.isNotBlank()) {
-            ReadField(l3, v3, Modifier.weight(1f))
-        } else {
-            Spacer(Modifier.weight(1f))
-        }
+        if (l2.isNotBlank()) ReadField(l2, v2, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+        if (l3.isNotBlank()) ReadField(l3, v3, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+    }
+}
+
+// Read-only values render as plain text inside an inset well: same look as the
+// editor's fields, but no cursor, focus state or keyboard to fight with.
+@Composable
+private fun ReadField(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .inset(raisedColors())
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value.ifBlank { "—" },
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (value.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
 @Composable
-private fun ReadField(label: String, value: String, modifier: Modifier = Modifier) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = {},
-        label = { Text(label) },
-        readOnly = true,
-        singleLine = true,
-        modifier = modifier
-    )
-}
-
-@Composable
 private fun ReadBlock(label: String, value: String) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = {},
-        label = { Text(label) },
-        readOnly = true,
-        minLines = 2,
-        modifier = Modifier.fillMaxWidth()
-    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 72.dp)
+            .inset(raisedColors())
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value.ifBlank { "—" },
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (value.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface
+        )
+    }
 }
 
 /**
@@ -297,4 +332,3 @@ private fun formatStoredWind(digits: String?): String {
         }
     }
 }
-

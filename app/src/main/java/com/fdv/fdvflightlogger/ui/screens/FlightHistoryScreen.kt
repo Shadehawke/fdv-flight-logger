@@ -16,26 +16,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,16 +48,33 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.fdv.fdvflightlogger.data.Airlines
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.UiEvent
+import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
+import com.fdv.fdvflightlogger.ui.theme.FieldShape
+import com.fdv.fdvflightlogger.ui.theme.fdvFieldColors
+import com.fdv.fdvflightlogger.ui.theme.inset
+import com.fdv.fdvflightlogger.ui.theme.raised
+import com.fdv.fdvflightlogger.ui.theme.raisedColors
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private enum class SortMode { NEWEST_FIRST, OLDEST_FIRST }
+
+private val CardShapeRadius = 16.dp
+private val DateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,6 +160,12 @@ fun FlightHistoryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Flight History") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = DeltaBlue,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -149,7 +175,6 @@ fun FlightHistoryScreen(
                     }
                 },
                 actions = {
-                    // Sort toggle (simple, obvious, one tap)
                     IconButton(onClick = {
                         sortMode.value = when (sortMode.value) {
                             SortMode.NEWEST_FIRST -> SortMode.OLDEST_FIRST
@@ -162,7 +187,6 @@ fun FlightHistoryScreen(
                         )
                     }
 
-                    // Export menu
                     IconButton(onClick = { menuOpen.value = true }) {
                         Icon(Icons.Filled.MoreVert, contentDescription = "More")
                     }
@@ -195,22 +219,27 @@ fun FlightHistoryScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Search bar
-            OutlinedTextField(
+            TextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 singleLine = true,
-                placeholder = { Text("Search (DEP/ARR/Flight#/Aircraft/Route/Notes)") },
+                placeholder = {
+                    Text(
+                        "Search DEP, ARR, flight #, aircraft, route, notes",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Search
-                )
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                shape = FieldShape,
+                colors = fdvFieldColors(),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .fillMaxWidth()
+                    .inset(raisedColors())
             )
 
-            // Tiny status line so users understand what they’re seeing
             val sortLabel = when (sortMode.value) {
                 SortMode.NEWEST_FIRST -> "Newest first"
                 SortMode.OLDEST_FIRST -> "Oldest first"
@@ -220,15 +249,16 @@ fun FlightHistoryScreen(
                 text = "${filteredFlights.size} flights • $sortLabel",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                // Generous padding so the raised shadows aren't clipped at the list edges
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 if (filteredFlights.isEmpty()) {
                     item {
@@ -246,7 +276,7 @@ fun FlightHistoryScreen(
                                 },
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -268,49 +298,70 @@ private fun FlightHistoryCard(
     f: FlightLogEntity,
     onClick: () -> Unit
 ) {
-    ElevatedCard(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
+            .raised(raisedColors(), cornerRadius = CardShapeRadius)
+            // Clip after raised so the ripple is rounded but the shadow isn't cut off
+            .clip(RoundedCornerShape(CardShapeRadius))
             .clickable(onClick = onClick)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "${f.dep} → ${f.arr}",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = "Open",
+                    text = formatDate(f.createdAtEpochMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            if (!f.flightNumber.isNullOrBlank()) {
-                Text(text = f.flightNumber, style = MaterialTheme.typography.bodySmall)
+            // Same formatter as log/detail/PDF, so Delta Connection shows the DAL number
+            val info = Airlines.formatFlightInfo(f.airline, f.flightNumber, f.aircraft)
+            if (info.isNotEmpty()) {
+                Text(
+                    text = info,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
-            if (!f.aircraft.isNullOrBlank()) {
-                Text(text = f.aircraft, style = MaterialTheme.typography.bodySmall)
-            }
-
-            val summary = buildString {
-                if (!f.zfw.isNullOrBlank()) append("ZFW: ${f.zfw}  ")
-                if (!f.fuel.isNullOrBlank()) append("Fuel: ${f.fuel}  ")
-                if (!f.pax.isNullOrBlank()) append("PAX: ${f.pax}  ")
-                if (!f.blockTime.isNullOrBlank()) append("Block: ${f.blockTime}")
-            }.trim()
+            val summary = buildList {
+                if (!f.zfw.isNullOrBlank()) add("ZFW ${f.zfw}")
+                if (!f.fuel.isNullOrBlank()) add("Fuel ${f.fuel}")
+                if (!f.pax.isNullOrBlank()) add("PAX ${f.pax}")
+                if (!f.blockTime.isNullOrBlank()) add("Block ${formatStoredTime(f.blockTime)}")
+            }.joinToString(" • ")
 
             if (summary.isNotBlank()) {
-                Text(text = summary, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
+
+        Icon(
+            imageVector = Icons.Filled.ChevronRight,
+            contentDescription = "Open",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 8.dp)
+        )
     }
 }
 
@@ -322,11 +373,30 @@ private fun FlightLogEntity.matches(q: String): Boolean {
 
     return dep.m() ||
             arr.m() ||
+            airline.m() ||
             flightNumber.m() ||
+            // Matches "DAL1234" even when the flight was logged under a Connection carrier
+            Airlines.formatFlightInfo(airline, flightNumber, aircraft).m() ||
             aircraft.m() ||
             route.m() ||
             scratchpad.m() ||
             sid.m() ||
             star.m() ||
             altn.m()
+}
+
+private fun formatDate(epochMs: Long): String =
+    Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).format(DateFormatter)
+
+/**
+ * Formats stored time digits (e.g., "0345") as HH:MM (e.g., "03:45")
+ */
+private fun formatStoredTime(digits: String?): String {
+    if (digits.isNullOrBlank()) return ""
+    val d = digits.filter { it.isDigit() }.take(4)
+    return when {
+        d.length <= 2 -> d
+        d.length == 3 -> "${d.take(2)}:${d.drop(2)}"
+        else -> "${d.take(2)}:${d.drop(2).take(2)}"
+    }
 }
