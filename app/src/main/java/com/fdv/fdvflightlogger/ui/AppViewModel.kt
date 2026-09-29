@@ -24,8 +24,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import android.util.Log
-import com.fdv.fdvflightlogger.data.airports.Airport
 import com.fdv.fdvflightlogger.data.airports.AirportRepository
 
 data class AppState(
@@ -68,15 +66,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             AirportRepository.ensureLoaded(getApplication())
-            // Temporary: confirms Step 2 works. Remove once the UI is wired up.
-            Log.d("FDV", "Airports loaded; KATL runways = ${AirportRepository.runwaysFor("KATL")}")
-            Log.d("FDV", "Search 'ATL' = ${AirportRepository.search("ATL").map { it.icao }}")
         }
     }
-
-    fun searchAirports(query: String): List<Airport> = AirportRepository.search(query)
-
-    fun getAirport(icao: String?): Airport? = AirportRepository.getByIcao(icao)
 
     fun saveFlight(draft: FlightDraft) {
         viewModelScope.launch {

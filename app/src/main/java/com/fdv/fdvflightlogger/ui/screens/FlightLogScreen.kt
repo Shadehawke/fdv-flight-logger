@@ -83,6 +83,8 @@ import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.mappers.toDraft
 import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
 import kotlinx.coroutines.delay
+import androidx.compose.ui.text.style.TextOverflow
+import com.fdv.fdvflightlogger.data.airports.AirportRepository
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -610,20 +612,18 @@ private fun RouteHeader(
 ) {
     SectionCard(title = "Route") {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            TextFieldSmall(
+            AirportField(
                 label = "DEP",
                 value = draft.dep,
-                onChange = { onDraftChange(draft.copy(dep = it.uppercase())) },
-                modifier = Modifier.weight(1f),
-                capitalization = KeyboardCapitalization.Characters
+                onValueChange = { onDraftChange(draft.copy(dep = it)) },
+                modifier = Modifier.weight(1f)
             )
             Text("→", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 12.dp))
-            TextFieldSmall(
+            AirportField(
                 label = "ARR",
                 value = draft.arr,
-                onChange = { onDraftChange(draft.copy(arr = it.uppercase())) },
-                modifier = Modifier.weight(1f),
-                capitalization = KeyboardCapitalization.Characters
+                onValueChange = { onDraftChange(draft.copy(arr = it)) },
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -679,12 +679,12 @@ private fun DepartureEnrouteFields(
     Spacer(Modifier.height(12.dp))
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall(
-            "RWY",
-            draft.depRwy.orEmpty(),
-            { onChange(draft.copy(depRwy = it.uppercase().takeIf { s -> s.isNotBlank() })) },
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters
+        RunwayField(
+            label = "RWY",
+            value = draft.depRwy.orEmpty(),
+            airportIcao = draft.dep,
+            onValueChange = { onChange(draft.copy(depRwy = it)) },
+            modifier = Modifier.weight(1f)
         )
         TextFieldSmall(
             "Gate",
@@ -752,12 +752,12 @@ private fun DepartureEnrouteFields(
 @Composable
 private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUnit: QnhUnit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall(
-            "RWY",
-            d.arrRwy.orEmpty(),
-            { onChange(d.copy(arrRwy = it.uppercase().takeIf { s -> s.isNotBlank() })) },  // ← Add .uppercase()
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters  // ← ADD
+        RunwayField(
+            label = "RWY",
+            value = d.arrRwy.orEmpty(),
+            airportIcao = d.arr,
+            onValueChange = { onChange(d.copy(arrRwy = it)) },
+            modifier = Modifier.weight(1f)
         )
         TextFieldSmall(
             "Gate",
@@ -1411,6 +1411,137 @@ private fun FlightTypeDropdown(
             }
         }
     }
+}
+
+/**
+ * Editable text field with a suggestion dropdown.
+ * Free text is always allowed; suggestions only help fill it in.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun <T> AutocompleteField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    suggestions: List<T>,
+    onSuggestionSelected: (T) -> Unit,
+    itemContent: @Composable (T) -> Unit,
+    modifier: Modifier = Modifier,
+    supportingText: String? = null,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded && suggestions.isNotEmpty(),
+        onExpandedChange = { expanded = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {
+                onValueChange(it)
+                expanded = true   // Reopen suggestions on every edit
+            },
+            label = { Text(label) },
+            singleLine = true,
+            supportingText = supportingText?.let {
+                { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType,
+                capitalization = KeyboardCapitalization.Characters
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                cursorColor = MaterialTheme.colorScheme.secondary,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                // PrimaryEditable keeps the keyboard open while the menu shows
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded && suggestions.isNotEmpty(),
+            onDismissRequest = { expanded = false }
+        ) {
+            suggestions.forEach { item ->
+                DropdownMenuItem(
+                    text = { itemContent(item) },
+                    onClick = {
+                        onSuggestionSelected(item)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AirportField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Recomputed only when the text changes, not on every recomposition
+    val suggestions = remember(value) { AirportRepository.search(value) }
+    val matched = remember(value) { AirportRepository.getByIcao(value) }
+
+    AutocompleteField(
+        label = label,
+        value = value,
+        onValueChange = { onValueChange(it.uppercase()) },
+        suggestions = suggestions,
+        onSuggestionSelected = { onValueChange(it.icao) },
+        itemContent = { airport ->
+            Column {
+                Text(airport.icao, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = listOf(airport.name, airport.city)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        supportingText = matched?.name,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun RunwayField(
+    label: String,
+    value: String,
+    airportIcao: String,
+    onValueChange: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val runways = remember(airportIcao) { AirportRepository.runwaysFor(airportIcao) }
+    // Empty field shows every runway; typing narrows it ("2" → 26L, 26R, 27L...)
+    val suggestions = remember(value, runways) {
+        if (value.isBlank()) runways else runways.filter { it.startsWith(value.uppercase()) }
+    }
+
+    AutocompleteField(
+        label = label,
+        value = value,
+        onValueChange = { onValueChange(it.uppercase().takeIf { s -> s.isNotBlank() }) },
+        suggestions = suggestions,
+        onSuggestionSelected = { onValueChange(it) },
+        itemContent = { Text(it) },
+        modifier = modifier
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
