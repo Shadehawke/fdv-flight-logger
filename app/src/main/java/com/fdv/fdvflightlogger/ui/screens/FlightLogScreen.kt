@@ -690,15 +690,12 @@ private fun DepartureEnrouteFields(
             Modifier.weight(1f),
             keyboardType = KeyboardType.Number
         )
-        TextFieldSmall(
-            "Flaps",
-            draft.depFlaps.orEmpty(),
-            {
-                val validated = validateNumeric(it, allowDecimal = false)
-                onChange(draft.copy(depFlaps = validated.takeIf { s -> s.isNotBlank() }))
-            },
-            Modifier.weight(1f),
-            keyboardType = KeyboardType.Number
+        FlapField(
+            label = "Flaps",
+            value = draft.depFlaps.orEmpty(),
+            options = remember(draft.aircraft) { AircraftTypes.takeoffFlapsFor(draft.aircraft) },
+            onValueChange = { onChange(draft.copy(depFlaps = it)) },
+            modifier = Modifier.weight(1f)
         )
         TextFieldSmall(
             "V2",
@@ -767,15 +764,12 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
             onChange = { onChange(d.copy(qnh = it.takeIf { s -> s.isNotBlank() })) },
             modifier = Modifier.weight(1f)
         )
-        TextFieldSmall(
-            "Arr Flaps",
-            d.arrFlaps.orEmpty(),
-            {
-                val validated = validateNumeric(it, allowDecimal = false)
-                onChange(d.copy(arrFlaps = validated.takeIf { s -> s.isNotBlank() }))
-            },
-            Modifier.weight(1f),
-            keyboardType = KeyboardType.Number
+        FlapField(
+            label = "Arr Flaps",
+            value = d.arrFlaps.orEmpty(),
+            options = remember(d.aircraft) { AircraftTypes.landingFlapsFor(d.aircraft) },
+            onValueChange = { onChange(d.copy(arrFlaps = it)) },
+            modifier = Modifier.weight(1f)
         )
     }
 
@@ -1528,6 +1522,30 @@ private fun AircraftField(
             }
         },
         supportingText = matched?.name,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun FlapField(
+    label: String,
+    value: String,
+    options: List<String>,
+    onValueChange: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Empty field shows every setting; typing narrows it ("1" → 1+F)
+    val suggestions = remember(value, options) {
+        if (value.isBlank()) options else options.filter { it.startsWith(value.uppercase()) }
+    }
+
+    AutocompleteField(
+        label = label,
+        value = value,
+        onValueChange = { onValueChange(it.uppercase().trim().takeIf { s -> s.isNotBlank() }) },
+        suggestions = suggestions,
+        onSuggestionSelected = { onValueChange(it) },
+        itemContent = { Text(it) },
         modifier = modifier
     )
 }

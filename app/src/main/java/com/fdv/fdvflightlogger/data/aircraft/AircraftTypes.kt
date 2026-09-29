@@ -74,6 +74,12 @@ object AircraftTypes {
     fun getByIcao(icao: String?): AircraftType? =
         icao?.trim()?.uppercase()?.let { byIcao[it] }
 
+    fun takeoffFlapsFor(icao: String?): List<String> =
+        getByIcao(icao)?.family?.takeoffFlaps.orEmpty()
+
+    fun landingFlapsFor(icao: String?): List<String> =
+        getByIcao(icao)?.family?.landingFlaps.orEmpty()
+
     /**
      * Ranked search: ICAO code matches first, then name words ("737" → 737-800, MAX 8...).
      * One character is enough, since the list is short.
