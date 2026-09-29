@@ -26,10 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -86,6 +83,9 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.text.style.TextOverflow
 import com.fdv.fdvflightlogger.data.airports.AirportRepository
 import com.fdv.fdvflightlogger.data.aircraft.AircraftTypes
+import com.fdv.fdvflightlogger.ui.theme.GradientButton
+import com.fdv.fdvflightlogger.ui.theme.raised
+import com.fdv.fdvflightlogger.ui.theme.raisedColors
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -344,7 +344,9 @@ fun FlightLogScreen(
                 onSectionClick = { section -> activeSection = section }
             )
 
-            Button(
+            GradientButton(
+                text = if (editFlightId != null) "Update Flight" else "Save Flight",
+                enabled = draft.isValid(),
                 onClick = {
                     appViewModel.saveFlight(draft)
 
@@ -356,13 +358,10 @@ fun FlightLogScreen(
                         initialDraft = blank
                     }
                 },
-                enabled = draft.isValid(),
                 modifier = Modifier
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
                     .fillMaxWidth()
-            ) {
-                Text(if (editFlightId != null) "Update Flight" else "Save Flight")
-            }
+            )
 
             when (widthClass) {
                 WindowWidthSizeClass.Expanded -> ExpandedWhiteboardLayout(
@@ -1150,11 +1149,13 @@ private fun IdentityStrip(
     lastLanded: String,
     currentFlight: FlightDraft? = null  // ← ADD PARAMETER
 ) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .fillMaxWidth()
+            .raised(raisedColors())
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
@@ -1264,23 +1265,18 @@ private fun RightEdgeFadeWithChevron(modifier: Modifier = Modifier) {
 @Composable
 private fun SectionCard(
     title: String,
-    modifier: Modifier = Modifier,  // ← ADD THIS PARAMETER
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    ElevatedCard(
-        modifier = modifier  // ← USE THE PARAMETER HERE
-            .fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .raised(raisedColors())
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            content()
-        }
+        Text(title, style = MaterialTheme.typography.titleMedium)
+        content()
     }
 }
 
