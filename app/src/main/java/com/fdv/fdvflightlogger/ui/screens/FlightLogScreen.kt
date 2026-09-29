@@ -85,6 +85,7 @@ import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
 import kotlinx.coroutines.delay
 import androidx.compose.ui.text.style.TextOverflow
 import com.fdv.fdvflightlogger.data.airports.AirportRepository
+import com.fdv.fdvflightlogger.data.aircraft.AircraftTypes
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -811,14 +812,12 @@ private fun AircraftPerfFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, 
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall(
-            "Aircraft",
-            d.aircraft.orEmpty(),
-            { onChange(d.copy(aircraft = it.uppercase().takeIf { s -> s.isNotBlank() })) },
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters
+        AircraftField(
+            value = d.aircraft.orEmpty(),
+            onValueChange = { onChange(d.copy(aircraft = it)) },
+            modifier = Modifier.weight(1f)
         )
-        Spacer(Modifier.weight(1f))  // Fill empty space
+        Spacer(Modifier.weight(1f))
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -1497,6 +1496,38 @@ private fun RunwayField(
         suggestions = suggestions,
         onSuggestionSelected = { onValueChange(it) },
         itemContent = { Text(it) },
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun AircraftField(
+    value: String,
+    onValueChange: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val suggestions = remember(value) { AircraftTypes.search(value) }
+    val matched = remember(value) { AircraftTypes.getByIcao(value) }
+
+    AutocompleteField(
+        label = "Aircraft",
+        value = value,
+        onValueChange = { onValueChange(it.uppercase().takeIf { s -> s.isNotBlank() }) },
+        suggestions = suggestions,
+        onSuggestionSelected = { onValueChange(it.icao) },
+        itemContent = { type ->
+            Column {
+                Text(type.icao, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = type.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        supportingText = matched?.name,
         modifier = modifier
     )
 }
