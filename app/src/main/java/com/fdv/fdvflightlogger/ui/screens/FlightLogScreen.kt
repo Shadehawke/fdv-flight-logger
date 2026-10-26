@@ -557,15 +557,37 @@ private fun RouteHeader(
         }
 
         val info = Airlines.formatFlightInfo(draft.airline, draft.flightNumber, draft.aircraft)
-        if (info.isNotEmpty()) {
+        val altnLabel = rememberAlternateLabel(draft.altn)
+
+        if (info.isNotEmpty() || altnLabel != null) {
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = info,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (info.isNotEmpty()) {
+                Text(
+                    text = info,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (altnLabel != null) {
+                Text(
+                    text = altnLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
+}
+
+// "Alternate: KBHM · Birmingham-Shuttlesworth Intl", or just the code if it's not in the database.
+// Recomputed only when the ALTN text changes.
+@Composable
+private fun rememberAlternateLabel(altn: String?): String? = remember(altn) {
+    val icao = altn?.trim()?.takeIf { it.isNotEmpty() } ?: return@remember null
+    val name = AirportRepository.getByIcao(icao)?.name
+    if (name != null) "Alternate: $icao · $name" else "Alternate: $icao"
 }
 
 @Composable
@@ -677,12 +699,11 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        TextFieldSmall(
-            "ALTN",
-            d.altn.orEmpty(),
-            { onChange(d.copy(altn = it.uppercase().takeIf { s -> s.isNotBlank() })) },
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters
+        AirportField(
+            label = "ALTN",
+            value = d.altn.orEmpty(),
+            onValueChange = { onChange(d.copy(altn = it.takeIf { s -> s.isNotBlank() })) },
+            modifier = Modifier.weight(1f)
         )
         QnhField(
             label = "QNH",
@@ -1056,9 +1077,15 @@ private fun IdentityStrip(
             val info = Airlines.formatFlightInfo(
                 currentFlight.airline, currentFlight.flightNumber, currentFlight.aircraft
             )
-            if (info.isNotEmpty()) {
+            val altn = currentFlight.altn?.trim()?.takeIf { it.isNotEmpty() }
+            val line = listOfNotNull(
+                info.takeIf { it.isNotEmpty() },
+                altn?.let { "ALTN $it" }
+            ).joinToString(" • ")
+
+            if (line.isNotEmpty()) {
                 Text(
-                    text = "Current Flight: $info",
+                    text = "Current Flight: $line",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )

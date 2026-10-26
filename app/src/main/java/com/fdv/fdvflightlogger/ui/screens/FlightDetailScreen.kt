@@ -48,6 +48,7 @@ import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
 import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
+import com.fdv.fdvflightlogger.data.airports.AirportRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -191,6 +192,17 @@ private fun FlightDetailContent(
             val info = Airlines.formatFlightInfo(flight.airline, flight.flightNumber, flight.aircraft)
             if (info.isNotEmpty()) {
                 Text(info, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            flight.altn?.trim()?.takeIf { it.isNotEmpty() }?.let { icao ->
+                val name = remember(icao) { AirportRepository.getByIcao(icao)?.name }
+                Text(
+                    text = if (name != null) "Alternate: $icao · $name" else "Alternate: $icao",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
 
