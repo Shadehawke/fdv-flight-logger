@@ -20,8 +20,8 @@ android {
         applicationId = "com.fdv.fdvflightlogger"
         minSdk = 31
         targetSdk = 36
-        versionCode = 3
-        versionName = "3.0"
+        versionCode = 4
+        versionName = "3.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
