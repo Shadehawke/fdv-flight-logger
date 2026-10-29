@@ -46,10 +46,9 @@ fun AppNavHost(
         }
 
         composable(Routes.LANDING) {
-            val state = appViewModel.state.collectAsStateWithLifecycle().value
             FlightLandingScreen(
-                navController = navController,
-                pilotName = state.profile.name
+                appViewModel = appViewModel,
+                navController = navController
             )
         }
 
