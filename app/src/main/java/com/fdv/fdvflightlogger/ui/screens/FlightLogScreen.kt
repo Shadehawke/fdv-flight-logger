@@ -91,6 +91,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material3.CircularProgressIndicator
 import com.fdv.fdvflightlogger.ui.mappers.applyTo
+import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
+import com.fdv.fdvflightlogger.ui.mappers.asTemplate
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -215,7 +217,9 @@ enum class FlightSection {
 fun FlightLogScreen(
     appViewModel: AppViewModel,
     navController: NavController,
-    editFlightId: Long? = null
+    editFlightId: Long? = null,
+    copyFromId: Long? = null,
+    template: FlightTemplate? = null
 ) {
     val state by appViewModel.state.collectAsStateWithLifecycle()
     val lastLandedDisplay = state.lastLanded.ifBlank { "--" }
@@ -247,20 +251,33 @@ fun FlightLogScreen(
 
     var activeSection by rememberSaveable { mutableStateOf(FlightSection.DEPARTURE) }
 
-    LaunchedEffect(editFlightId) {
-        if (editFlightId != null) {
-            val e = appViewModel.getFlightById(editFlightId)
-            if (e != null) {
-                val loaded = e.toDraft()
-                draft = loaded
-                initialDraft = loaded
+    // Survives rotation and trips to Settings. Without it, coming back would re-run the
+    // load below and wipe whatever was typed into the form.
+    val hasLoaded = rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(editFlightId, copyFromId, template) {
+        if (hasLoaded.value) return@LaunchedEffect
+
+        when {
+            editFlightId != null -> {
+                appViewModel.getFlightById(editFlightId)?.toDraft()?.let { loaded ->
+                    draft = loaded
+                    initialDraft = loaded
+                }
             }
-        } else {
-            // Creating a new flight: baseline is blank
-            val blank = FlightDraft()
-            draft = blank
-            initialDraft = blank
+
+            copyFromId != null && template != null -> {
+                appViewModel.getFlightById(copyFromId)?.toDraft()?.let { source ->
+                    draft = source.asTemplate(template)
+                    // Baseline stays blank, so the copy counts as unsaved and Back asks first
+                    initialDraft = FlightDraft()
+                }
+            }
+
+            // New flight: draft and initialDraft already start blank, nothing to load
         }
+
+        hasLoaded.value = true
     }
 
     BackHandler(enabled = isDirty) {

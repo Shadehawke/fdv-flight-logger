@@ -49,6 +49,10 @@ import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
 import com.fdv.fdvflightlogger.data.airports.AirportRepository
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.SwapHoriz
+import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
+import com.fdv.fdvflightlogger.ui.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +94,20 @@ fun FlightDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        enabled = !loading && flight != null,
+                        onClick = { navController.navigate(Routes.logFrom(flightId, FlightTemplate.RETURN_LEG)) }
+                    ) {
+                        Icon(Icons.Filled.SwapHoriz, contentDescription = "Fly return leg")
+                    }
+
+                    IconButton(
+                        enabled = !loading && flight != null,
+                        onClick = { navController.navigate(Routes.logFrom(flightId, FlightTemplate.DUPLICATE)) }
+                    ) {
+                        Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate flight")
+                    }
+
                     IconButton(
                         enabled = !loading && flight != null,
                         onClick = { navController.navigate("log/$flightId") }

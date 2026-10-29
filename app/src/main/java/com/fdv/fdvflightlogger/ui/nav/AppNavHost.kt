@@ -16,6 +16,7 @@ import com.fdv.fdvflightlogger.ui.screens.FlightLogScreen
 import com.fdv.fdvflightlogger.ui.screens.SetupScreen
 import com.fdv.fdvflightlogger.ui.screens.SettingsScreen
 import com.fdv.fdvflightlogger.ui.screens.SplashScreen
+import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
 
 @Composable
 fun AppNavHost(
@@ -92,6 +93,26 @@ fun AppNavHost(
                 appViewModel = appViewModel,
                 navController = navController,
                 editFlightId = id
+            )
+        }
+
+        composable(
+            route = Routes.LOG_FROM,
+            arguments = listOf(
+                navArgument("id") { type = NavType.LongType },
+                navArgument("template") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getLong("id") ?: return@composable
+            val template = backStackEntry.arguments?.getString("template")
+                ?.let { name -> FlightTemplate.entries.firstOrNull { it.name == name } }
+                ?: return@composable
+
+            FlightLogScreen(
+                appViewModel = appViewModel,
+                navController = navController,
+                copyFromId = id,
+                template = template
             )
         }
 
