@@ -39,6 +39,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import com.fdv.fdvflightlogger.data.stats.FlightStats
 import com.fdv.fdvflightlogger.data.stats.StatsCalculator
 import kotlinx.coroutines.flow.flowOn
+import com.fdv.fdvflightlogger.data.history.LogbookHistory
+import kotlinx.coroutines.flow.map
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -95,6 +97,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = FlightStats()
+            )
+
+    val logbookHistory: StateFlow<LogbookHistory> =
+        flightRepo.observeAll()
+            .map { flights -> LogbookHistory.from(flights) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = LogbookHistory.EMPTY
             )
 
     init {

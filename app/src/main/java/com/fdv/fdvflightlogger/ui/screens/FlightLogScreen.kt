@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,15 +18,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -56,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -74,9 +80,13 @@ import com.fdv.fdvflightlogger.data.Airlines
 import com.fdv.fdvflightlogger.data.aircraft.AircraftTypes
 import com.fdv.fdvflightlogger.data.airports.AirportRepository
 import com.fdv.fdvflightlogger.data.db.FlightType
+import com.fdv.fdvflightlogger.data.history.LogbookHistory
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
+import com.fdv.fdvflightlogger.ui.mappers.applyTo
+import com.fdv.fdvflightlogger.ui.mappers.asTemplate
 import com.fdv.fdvflightlogger.ui.mappers.toDraft
 import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
 import com.fdv.fdvflightlogger.ui.theme.FieldShape
@@ -86,14 +96,8 @@ import com.fdv.fdvflightlogger.ui.theme.fdvFieldColors
 import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
-import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material3.CircularProgressIndicator
-import com.fdv.fdvflightlogger.ui.mappers.applyTo
-import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
-import com.fdv.fdvflightlogger.ui.mappers.asTemplate
+import kotlin.math.roundToInt
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -237,6 +241,7 @@ fun FlightLogScreen(
 
     val context = LocalContext.current
     val simBriefLoading by appViewModel.simBriefLoading.collectAsStateWithLifecycle()
+    val logbookHistory by appViewModel.logbookHistory.collectAsStateWithLifecycle()
     val confirmSimBrief = rememberSaveable { mutableStateOf(false) }
 
     // state.settings is read when the plan arrives, so unit changes made since opening the screen apply
@@ -452,7 +457,8 @@ fun FlightLogScreen(
                     onDraftChange = { draft = it },
                     qnhUnit = state.settings.qnhUnit,
                     tempUnit = state.settings.tempUnit,
-                    activeSection = activeSection
+                    activeSection = activeSection,
+                    history = logbookHistory
                 )
 
                 WindowWidthSizeClass.Medium -> MediumTwoColumnLayout(
@@ -460,7 +466,8 @@ fun FlightLogScreen(
                     onDraftChange = { draft = it },
                     qnhUnit = state.settings.qnhUnit,
                     tempUnit = state.settings.tempUnit,
-                    activeSection = activeSection
+                    activeSection = activeSection,
+                    history = logbookHistory
                 )
 
                 else -> CompactSingleColumnLayout(
@@ -468,7 +475,8 @@ fun FlightLogScreen(
                     onDraftChange = { draft = it },
                     qnhUnit = state.settings.qnhUnit,
                     tempUnit = state.settings.tempUnit,
-                    activeSection = activeSection
+                    activeSection = activeSection,
+                    history = logbookHistory
                 )
             }
         }
@@ -483,7 +491,8 @@ private fun CompactSingleColumnLayout(
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
-    activeSection: FlightSection
+    activeSection: FlightSection,
+    history: LogbookHistory
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -499,7 +508,7 @@ private fun CompactSingleColumnLayout(
         ) {
             RouteHeader(draft, onDraftChange)
 
-            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection)
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history)
 
             Spacer(Modifier.height(8.dp))
         }
@@ -514,7 +523,8 @@ private fun MediumTwoColumnLayout(
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
-    activeSection: FlightSection
+    activeSection: FlightSection,
+    history: LogbookHistory
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -527,7 +537,7 @@ private fun MediumTwoColumnLayout(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             RouteHeader(draft, onDraftChange)
-            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection)
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history)
         }
 
         ScratchpadCard(draft, onDraftChange)
@@ -540,7 +550,8 @@ private fun ExpandedWhiteboardLayout(
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
-    activeSection: FlightSection
+    activeSection: FlightSection,
+    history: LogbookHistory
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -553,7 +564,7 @@ private fun ExpandedWhiteboardLayout(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             RouteHeader(draft, onDraftChange)
-            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection)
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history)
         }
 
         ScratchpadCard(draft, onDraftChange)
@@ -567,15 +578,16 @@ private fun ActiveSectionCard(
     onDraftChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
-    activeSection: FlightSection
+    activeSection: FlightSection,
+    history: LogbookHistory
 ) {
     when (activeSection) {
         FlightSection.DEPARTURE -> SectionCard(title = "Departure + Enroute") {
-            DepartureEnrouteFields(draft, onDraftChange, qnhUnit)
+            DepartureEnrouteFields(draft, onDraftChange, qnhUnit, history)
         }
 
         FlightSection.ARRIVAL -> SectionCard(title = "Arrival") {
-            ArrivalFields(draft, onDraftChange, qnhUnit)
+            ArrivalFields(draft, onDraftChange, qnhUnit, history)
         }
 
         FlightSection.AIRCRAFT -> SectionCard(title = "Aircraft + Performance") {
@@ -668,7 +680,6 @@ private fun RouteHeader(
     }
 }
 
-
 // "Alternate: KBHM · Birmingham-Shuttlesworth Intl", or just the code if it's not in the database.
 // Recomputed only when the ALTN text changes.
 @Composable
@@ -682,7 +693,8 @@ private fun rememberAlternateLabel(altn: String?): String? = remember(altn) {
 private fun DepartureEnrouteFields(
     draft: FlightDraft,
     onChange: (FlightDraft) -> Unit,
-    qnhUnit: QnhUnit
+    qnhUnit: QnhUnit,
+    history: LogbookHistory
 ) {
     FlightTypeDropdown(
         flightType = draft.flightType,
@@ -700,19 +712,19 @@ private fun DepartureEnrouteFields(
             onValueChange = { onChange(draft.copy(depRwy = it)) },
             modifier = Modifier.weight(1f)
         )
-        TextFieldSmall(
-            "Gate",
-            draft.depGate.orEmpty(),
-            { onChange(draft.copy(depGate = it.uppercase().takeIf { s -> s.isNotBlank() })) },
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters
+        LearnedField(
+            label = "Gate",
+            value = draft.depGate.orEmpty(),
+            remembered = remember(history, draft.dep) { history.departureGates(draft.dep) },
+            onValueChange = { onChange(draft.copy(depGate = it)) },
+            modifier = Modifier.weight(1f)
         )
-        TextFieldSmall(
-            "SID",
-            draft.sid.orEmpty(),
-            { onChange(draft.copy(sid = it.uppercase().takeIf { s -> s.isNotBlank() })) },
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters
+        LearnedField(
+            label = "SID",
+            value = draft.sid.orEmpty(),
+            remembered = remember(history, draft.dep, draft.depRwy) { history.sids(draft.dep, draft.depRwy) },
+            onValueChange = { onChange(draft.copy(sid = it)) },
+            modifier = Modifier.weight(1f)
         )
     }
 
@@ -758,10 +770,22 @@ private fun DepartureEnrouteFields(
         value = draft.route.orEmpty(),
         onChange = { onChange(draft.copy(route = it.uppercase().takeIf { s -> s.isNotBlank() })) }
     )
+
+    if (draft.route.isNullOrBlank()) {
+        RememberedRoutes(
+            routes = remember(history, draft.dep, draft.arr) { history.routes(draft.dep, draft.arr) },
+            onPick = { onChange(draft.copy(route = it)) }
+        )
+    }
 }
 
 @Composable
-private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUnit: QnhUnit) {
+private fun ArrivalFields(
+    d: FlightDraft,
+    onChange: (FlightDraft) -> Unit,
+    qnhUnit: QnhUnit,
+    history: LogbookHistory
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         RunwayField(
             label = "RWY",
@@ -770,19 +794,19 @@ private fun ArrivalFields(d: FlightDraft, onChange: (FlightDraft) -> Unit, qnhUn
             onValueChange = { onChange(d.copy(arrRwy = it)) },
             modifier = Modifier.weight(1f)
         )
-        TextFieldSmall(
-            "Gate",
-            d.arrGate.orEmpty(),
-            { onChange(d.copy(arrGate = it.uppercase().takeIf { s -> s.isNotBlank() })) },
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters
+        LearnedField(
+            label = "Gate",
+            value = d.arrGate.orEmpty(),
+            remembered = remember(history, d.arr) { history.arrivalGates(d.arr) },
+            onValueChange = { onChange(d.copy(arrGate = it)) },
+            modifier = Modifier.weight(1f)
         )
-        TextFieldSmall(
-            "STAR",
-            d.star.orEmpty(),
-            { onChange(d.copy(star = it.uppercase().takeIf { s -> s.isNotBlank() })) },
-            Modifier.weight(1f),
-            capitalization = KeyboardCapitalization.Characters
+        LearnedField(
+            label = "STAR",
+            value = d.star.orEmpty(),
+            remembered = remember(history, d.arr, d.arrRwy) { history.stars(d.arr, d.arrRwy) },
+            onValueChange = { onChange(d.copy(star = it)) },
+            modifier = Modifier.weight(1f)
         )
     }
 
@@ -1520,6 +1544,60 @@ private fun FlapField(
         itemContent = { Text(it) },
         modifier = modifier
     )
+}
+
+/** Free-text field that suggests values from the pilot's own logbook. */
+@Composable
+private fun LearnedField(
+    label: String,
+    value: String,
+    remembered: List<String>,
+    onValueChange: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Empty field shows everything remembered; typing narrows it. The exact current value is hidden.
+    val suggestions = remember(value, remembered) {
+        val typed = value.trim().uppercase()
+        remembered.filter { it.startsWith(typed) && it != typed }.take(6)
+    }
+
+    AutocompleteField(
+        label = label,
+        value = value,
+        onValueChange = { onValueChange(it.uppercase().takeIf { s -> s.isNotBlank() }) },
+        suggestions = suggestions,
+        onSuggestionSelected = { onValueChange(it) },
+        itemContent = { Text(it) },
+        modifier = modifier
+    )
+}
+
+/** Routes flown before for this city pair, shown under an empty Route field. */
+@Composable
+private fun RememberedRoutes(routes: List<String>, onPick: (String) -> Unit) {
+    if (routes.isEmpty()) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = "Flown before",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        routes.take(3).forEach { route ->
+            Text(
+                text = route,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onPick(route) }
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
