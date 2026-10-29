@@ -43,6 +43,12 @@ def runway_sort_key(ident: str):
     suffix = "".join(ch for ch in ident if not ch.isdigit())
     return (int(digits) if digits else 99, suffix)
 
+def parse_coord(value):
+    # 4 decimals is ~11 m of precision: plenty for distances, and keeps the file small
+    try:
+        return round(float(value), 4)
+    except (TypeError, ValueError):
+        return None
 
 def load_airports() -> dict:
     """Returns {ourairports_ident: airport_dict} for airports we keep."""
@@ -59,8 +65,7 @@ def load_airports() -> dict:
                 continue
             seen_icao.add(icao)
 
-            # Key by OurAirports' ident because that's what runways.csv references.
-            by_ident[row["ident"].strip().upper()] = {
+            airport = {
                 "icao": icao,
                 "iata": (row.get("iata_code") or "").strip().upper(),
                 "name": (row.get("name") or "").strip(),
@@ -68,6 +73,17 @@ def load_airports() -> dict:
                 "country": (row.get("iso_country") or "").strip(),
                 "rwys": [],
             }
+
+            lat = parse_coord(row.get("latitude_deg"))
+            lon = parse_coord(row.get("longitude_deg"))
+            # Only write coordinates when both are valid; the app treats missing as "unknown"
+            if lat is not None and lon is not None:
+                airport["lat"] = lat
+                airport["lon"] = lon
+
+            # Key by OurAirports' ident because that's what runways.csv references.
+            by_ident[row["ident"].strip().upper()] = airport
+
     return by_ident
 
 

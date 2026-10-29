@@ -6,7 +6,9 @@ data class Airport(
     val name: String,
     val city: String,
     val country: String,
-    val runways: List<String>
+    val runways: List<String>,
+    val lat: Double? = null,
+    val lon: Double? = null
 ) {
     // Precomputed once so search doesn't uppercase 5,800 strings on every keystroke.
     // Declared in the body, so they're excluded from equals/hashCode.

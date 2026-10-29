@@ -1,6 +1,11 @@
 package com.fdv.fdvflightlogger.data.airports
 
 import android.content.Context
+import kotlin.math.asin
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -10,6 +15,8 @@ import org.json.JSONArray
 object AirportRepository {
 
     private const val ASSET_NAME = "airports.json"
+
+    private const val EARTH_RADIUS_NM = 3440.065
 
     @Volatile
     private var airports: List<Airport> = emptyList()
@@ -38,6 +45,26 @@ object AirportRepository {
 
     fun runwaysFor(icao: String?): List<String> =
         getByIcao(icao)?.runways.orEmpty()
+
+    /**
+     * Great-circle distance in nautical miles, or null if either airport (or its position) is unknown.
+     * This is the shortest path over the Earth's surface, not the planned route.
+     */
+    fun distanceNm(fromIcao: String?, toIcao: String?): Double? {
+        val from = getByIcao(fromIcao) ?: return null
+        val to = getByIcao(toIcao) ?: return null
+        val lat1 = from.lat ?: return null
+        val lon1 = from.lon ?: return null
+        val lat2 = to.lat ?: return null
+        val lon2 = to.lon ?: return null
+
+        // Haversine formula
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2).pow(2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
+        return 2 * EARTH_RADIUS_NM * asin(sqrt(a))
+    }
 
     /**
      * Ranked search across ICAO, IATA, name and city.
@@ -79,7 +106,9 @@ object AirportRepository {
                 name = obj.optString("name"),
                 city = obj.optString("city"),
                 country = obj.optString("country"),
-                runways = if (rwys == null) emptyList() else List(rwys.length()) { rwys.getString(it) }
+                runways = if (rwys == null) emptyList() else List(rwys.length()) { rwys.getString(it) },
+                lat = obj.optDouble("lat").takeUnless { it.isNaN() },
+                lon = obj.optDouble("lon").takeUnless { it.isNaN() }
             )
         }
     }

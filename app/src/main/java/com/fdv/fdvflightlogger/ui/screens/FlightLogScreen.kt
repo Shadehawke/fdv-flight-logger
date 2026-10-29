@@ -86,6 +86,7 @@ import com.fdv.fdvflightlogger.ui.theme.fdvFieldColors
 import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.CloudDownload
@@ -636,9 +637,17 @@ private fun RouteHeader(
 
         val info = Airlines.formatFlightInfo(draft.airline, draft.flightNumber, draft.aircraft)
         val altnLabel = rememberAlternateLabel(draft.altn)
+        val distanceNm = remember(draft.dep, draft.arr) { AirportRepository.distanceNm(draft.dep, draft.arr) }
 
-        if (info.isNotEmpty() || altnLabel != null) {
+        if (info.isNotEmpty() || altnLabel != null || distanceNm != null) {
             Spacer(Modifier.height(8.dp))
+            if (distanceNm != null) {
+                Text(
+                    text = "%,d nm great-circle".format(distanceNm.roundToInt()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             if (info.isNotEmpty()) {
                 Text(
                     text = info,
@@ -658,6 +667,7 @@ private fun RouteHeader(
         }
     }
 }
+
 
 // "Alternate: KBHM · Birmingham-Shuttlesworth Intl", or just the code if it's not in the database.
 // Recomputed only when the ALTN text changes.
