@@ -38,6 +38,9 @@ import com.fdv.fdvflightlogger.data.prefs.ThemeMode
 import com.fdv.fdvflightlogger.data.prefs.WeightUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.input.ImeAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +76,28 @@ fun SettingsScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Local text wins once the user starts typing, so DataStore's async
+            // round-trip can't overwrite characters mid-edit
+            var aliasText by rememberSaveable { mutableStateOf<String?>(null) }
+
+            OutlinedTextField(
+                value = aliasText ?: settings.simbriefAlias,
+                onValueChange = { input ->
+                    aliasText = input
+                    appViewModel.updateSettings { it.copy(simbriefAlias = input) }
+                },
+                label = { Text("SimBrief / Navigraph Alias") },
+                supportingText = {
+                    Text("Found in SimBrief → Account Settings. Only used when you tap Import.")
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Done
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
