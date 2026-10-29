@@ -29,6 +29,13 @@ import android.content.pm.PackageManager
 import android.os.Build
 import com.fdv.fdvflightlogger.data.backup.FlightBackup
 import kotlinx.coroutines.flow.first
+import com.fdv.fdvflightlogger.data.simbrief.SimBriefClient
+import com.fdv.fdvflightlogger.data.simbrief.SimBriefException
+import com.fdv.fdvflightlogger.data.simbrief.SimBriefParser
+import com.fdv.fdvflightlogger.data.simbrief.SimBriefPlan
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -48,6 +55,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val events: SharedFlow<UiEvent> = _events.asSharedFlow()
+
+    private val _simBriefLoading = MutableStateFlow(false)
+    val simBriefLoading: StateFlow<Boolean> = _simBriefLoading.asStateFlow()
 
     val state: StateFlow<AppState> =
         combine(
@@ -210,6 +220,40 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _events.tryEmit(UiEvent.ExportError(e.message ?: "Invalid backup file"))
             } catch (t: Throwable) {
                 _events.tryEmit(UiEvent.ExportError("Restore failed: ${t.message ?: "Unknown error"}"))
+            }
+        }
+    }
+
+    /**
+     * Fetches the pilot's latest SimBrief plan and hands it to [onImported].
+     * Only call this from a button tap: SimBrief bans apps that poll its endpoint.
+     */
+    fun importFromSimBrief(context: Context, onImported: (SimBriefPlan) -> Unit) {
+        // A second tap while a request is in flight does nothing
+        if (_simBriefLoading.value) return
+
+        val alias = state.value.settings.simbriefAlias.trim()
+        if (alias.isEmpty()) {
+            _events.tryEmit(UiEvent.Message("Add your SimBrief alias in Settings first"))
+            return
+        }
+
+        viewModelScope.launch {
+            _simBriefLoading.value = true
+            try {
+                val json = SimBriefClient.fetchLatestOfp(alias, appVersion(context))
+                // The OFP JSON is large (~800 KB); parse it off the main thread
+                val plan = withContext(Dispatchers.Default) { SimBriefParser.parse(json) }
+                onImported(plan)
+                _events.tryEmit(UiEvent.Message("Imported ${plan.dep} → ${plan.arr} from SimBrief"))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SimBriefException) {
+                _events.tryEmit(UiEvent.ExportError(e.message ?: "SimBrief import failed"))
+            } catch (t: Throwable) {
+                _events.tryEmit(UiEvent.ExportError("SimBrief import failed: ${t.message ?: "Unknown error"}"))
+            } finally {
+                _simBriefLoading.value = false
             }
         }
     }

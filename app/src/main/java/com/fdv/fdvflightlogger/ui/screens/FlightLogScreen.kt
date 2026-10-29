@@ -87,6 +87,10 @@ import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material3.CircularProgressIndicator
+import com.fdv.fdvflightlogger.ui.mappers.applyTo
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -226,6 +230,17 @@ fun FlightLogScreen(
 
     val confirmDiscard = rememberSaveable { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val simBriefLoading by appViewModel.simBriefLoading.collectAsStateWithLifecycle()
+    val confirmSimBrief = rememberSaveable { mutableStateOf(false) }
+
+    // state.settings is read when the plan arrives, so unit changes made since opening the screen apply
+    val importSimBrief = {
+        appViewModel.importFromSimBrief(context) { plan ->
+            draft = plan.applyTo(draft, state.settings)
+        }
+    }
+
     val isDirty = draft.normalizedForDirtyCheck() != initialDraft.normalizedForDirtyCheck()
 
     val widthClass = rememberWindowWidthClass()
@@ -301,6 +316,28 @@ fun FlightLogScreen(
         )
     }
 
+    if (confirmSimBrief.value) {
+        AlertDialog(
+            onDismissRequest = { confirmSimBrief.value = false },
+            title = { Text("Import from SimBrief?") },
+            text = {
+                Text(
+                    "Your latest SimBrief plan will replace the planned fields in this flight. " +
+                            "Gates, ATC info and your scratchpad are kept."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmSimBrief.value = false
+                    importSimBrief()
+                }) { Text("Import") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmSimBrief.value = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -312,6 +349,30 @@ fun FlightLogScreen(
                     actionIconContentColor = Color.White
                 ),
                 actions = {
+                    IconButton(
+                        onClick = {
+                            // Only ask for confirmation when there's something to overwrite
+                            if (draft.dep.isBlank() && draft.arr.isBlank()) {
+                                importSimBrief()
+                            } else {
+                                confirmSimBrief.value = true
+                            }
+                        },
+                        enabled = !simBriefLoading
+                    ) {
+                        if (simBriefLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.CloudDownload,
+                                contentDescription = "Import from SimBrief"
+                            )
+                        }
+                    }
                     IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
