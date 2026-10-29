@@ -36,6 +36,9 @@ import com.fdv.fdvflightlogger.data.simbrief.SimBriefPlan
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.fdv.fdvflightlogger.data.stats.FlightStats
+import com.fdv.fdvflightlogger.data.stats.StatsCalculator
+import kotlinx.coroutines.flow.flowOn
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -58,6 +61,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _simBriefLoading = MutableStateFlow(false)
     val simBriefLoading: StateFlow<Boolean> = _simBriefLoading.asStateFlow()
+    // Flips to true once airports.json is parsed, so stats recompute with distances included
+    private val airportsReady = MutableStateFlow(AirportRepository.isLoaded)
 
     val state: StateFlow<AppState> =
         combine(
@@ -77,9 +82,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = AppState()
         )
 
+    val stats: StateFlow<FlightStats> =
+        combine(
+            flightRepo.observeAll(),
+            repo.pilotProfileFlow,
+            airportsReady
+        ) { flights, profile, _ ->
+            StatsCalculator.compute(flights, profile.hub, AirportRepository::distanceNm)
+        }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = FlightStats()
+            )
+
     init {
         viewModelScope.launch {
             AirportRepository.ensureLoaded(getApplication())
+            airportsReady.value = true
         }
     }
 
