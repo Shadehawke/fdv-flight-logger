@@ -30,4 +30,8 @@ interface FlightLogDao {
 
     @Delete
     suspend fun deleteFlight(flight: FlightLogEntity)
+
+    // Restored rows arrive with id = 0, so Room assigns new IDs and nothing is overwritten
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertAll(entities: List<FlightLogEntity>): List<Long>
 }

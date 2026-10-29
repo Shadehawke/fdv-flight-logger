@@ -68,4 +68,26 @@ class FlightLogRepository(context: Context) {
     suspend fun getLatestFlight(): FlightLogEntity? {
         return dao.getLatestFlight()
     }
+
+    data class RestoreResult(val added: Int, val skipped: Int)
+
+    /**
+     * Merges backed-up flights into the logbook. A flight already present (same creation
+     * time and route) is skipped, so restoring the same backup twice adds nothing.
+     */
+    suspend fun restore(flights: List<FlightLogEntity>): RestoreResult {
+        val existing = dao.getAll().mapTo(HashSet()) { it.dedupeKey() }
+        val seenInBackup = HashSet<String>()
+
+        val toInsert = flights.filter { f ->
+            val key = f.dedupeKey()
+            key !in existing && seenInBackup.add(key)
+        }
+
+        if (toInsert.isNotEmpty()) dao.insertAll(toInsert)
+        return RestoreResult(added = toInsert.size, skipped = flights.size - toInsert.size)
+    }
+
+    // createdAtEpochMs survives edits, so it identifies a flight across installs
+    private fun FlightLogEntity.dedupeKey(): String = "$createdAtEpochMs|$dep|$arr"
 }

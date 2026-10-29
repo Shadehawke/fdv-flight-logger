@@ -25,6 +25,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.fdv.fdvflightlogger.data.airports.AirportRepository
+import android.content.pm.PackageManager
+import android.os.Build
+import com.fdv.fdvflightlogger.data.backup.FlightBackup
+import kotlinx.coroutines.flow.first
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -159,6 +163,69 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun backupFlights(context: Context, uri: Uri, fileName: String) {
+        viewModelScope.launch {
+            try {
+                val flights = flightRepo.getAll()
+                val json = FlightBackup.toJson(flights, appVersion(context))
+
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        out.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: error("Unable to open output stream")
+                }
+
+                _events.tryEmit(UiEvent.ExportSuccess(fileName, "application/json", uri))
+            } catch (t: Throwable) {
+                _events.tryEmit(UiEvent.ExportError("Backup failed: ${t.message ?: "Unknown error"}"))
+            }
+        }
+    }
+
+    fun restoreFlights(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val json = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        input.readBytes().toString(Charsets.UTF_8)
+                    } ?: error("Unable to open file")
+                }
+
+                val flights = withContext(Dispatchers.Default) { FlightBackup.fromJson(json) }
+                val result = flightRepo.restore(flights)
+
+                // Fresh install: seed "Last landed" from the most recent restored flight
+                if (result.added > 0 && repo.lastLandedFlow.first().isBlank()) {
+                    flights.maxByOrNull { it.createdAtEpochMs }?.let { repo.setLastLanded(it.arr) }
+                }
+
+                val message = when {
+                    result.added == 0 -> "Nothing new to restore; all ${result.skipped} flights are already in your logbook"
+                    result.skipped == 0 -> "Restored ${result.added} flights"
+                    else -> "Restored ${result.added} flights (${result.skipped} already in your logbook)"
+                }
+                _events.tryEmit(UiEvent.Message(message))
+            } catch (e: FlightBackup.InvalidBackupException) {
+                _events.tryEmit(UiEvent.ExportError(e.message ?: "Invalid backup file"))
+            } catch (t: Throwable) {
+                _events.tryEmit(UiEvent.ExportError("Restore failed: ${t.message ?: "Unknown error"}"))
+            }
+        }
+    }
+
+    private fun appVersion(context: Context): String =
+        runCatching {
+            val pm = context.packageManager
+            // The Int-flags overload is deprecated from API 33; minSdk is 31, so branch
+            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(context.packageName, 0)
+            }
+            info.versionName
+        }.getOrNull() ?: "unknown"
 
     suspend fun getFlightById(id: Long): FlightLogEntity? {
         return flightRepo.getById(id)

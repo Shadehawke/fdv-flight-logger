@@ -70,6 +70,8 @@ import com.fdv.fdvflightlogger.ui.theme.raisedColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.material3.HorizontalDivider
+import java.time.LocalDate
 
 private enum class SortMode { NEWEST_FIRST, OLDEST_FIRST }
 
@@ -103,6 +105,21 @@ fun FlightHistoryScreen(
         contract = ActivityResultContracts.CreateDocument("application/pdf"),
         onResult = { uri ->
             if (uri != null) appViewModel.exportAllFlightsToPdf(context, uri)
+        }
+    )
+
+    val createBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
+        onResult = { uri ->
+            if (uri != null) appViewModel.backupFlights(context, uri, backupFileName())
+        }
+    )
+
+    // "*/*" because many file managers report .json as octet-stream; the parser validates the content
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            if (uri != null) appViewModel.restoreFlights(context, uri)
         }
     )
 
@@ -207,6 +224,21 @@ fun FlightHistoryScreen(
                             onClick = {
                                 menuOpen.value = false
                                 createPdfLauncher.launch("fdv_flights.pdf")
+                            }
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Back Up Logbook") },
+                            onClick = {
+                                menuOpen.value = false
+                                createBackupLauncher.launch(backupFileName())
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Restore from Backup") },
+                            onClick = {
+                                menuOpen.value = false
+                                restoreLauncher.launch(arrayOf("application/json", "*/*"))
                             }
                         )
                     }
@@ -387,6 +419,8 @@ private fun FlightLogEntity.matches(q: String): Boolean {
 
 private fun formatDate(epochMs: Long): String =
     Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).format(DateFormatter)
+
+private fun backupFileName(): String = "fdv_backup_${LocalDate.now()}.json"
 
 /**
  * Formats stored time digits (e.g., "0345") as HH:MM (e.g., "03:45")
