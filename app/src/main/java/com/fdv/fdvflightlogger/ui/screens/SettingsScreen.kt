@@ -102,11 +102,24 @@ fun SettingsScreen(
 
             // Temporary while building sign-in; 3e turns this into a proper FDV account section
             val context = LocalContext.current
-            OutlinedButton(
-                onClick = { appViewModel.startFdvSignIn(context) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Sign in with FDV")
+            val fdvSession by appViewModel.fdvSession.collectAsStateWithLifecycle()
+            // A delegated property can't be smart-cast, so copy it to a local first
+            val session = fdvSession
+
+            if (session == null) {
+                OutlinedButton(
+                    onClick = { appViewModel.startFdvSignIn(context) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Sign in with FDV")
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { appViewModel.signOutOfFdv() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Sign out of FDV (${session.callsign ?: "pilot"})")
+                }
             }
 
             Row(

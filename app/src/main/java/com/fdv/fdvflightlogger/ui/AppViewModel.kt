@@ -52,6 +52,7 @@ import com.fdv.fdvflightlogger.data.auth.FdvAuthClient
 import com.fdv.fdvflightlogger.data.auth.FdvAuthException
 import com.fdv.fdvflightlogger.data.auth.FdvSession
 import android.util.Log
+import com.fdv.fdvflightlogger.data.auth.FdvSessionStore
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -79,9 +80,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // The secrets for a sign-in in progress; only needed until the browser comes back
     private var pendingSignIn: PkceSession? = null
 
-    // Signed-in FDV pilot; in memory only until 3d stores it encrypted
-    private val _fdvSession = MutableStateFlow<FdvSession?>(null)
-    val fdvSession: StateFlow<FdvSession?> = _fdvSession.asStateFlow()
+    private val sessionStore = FdvSessionStore(getApplication<Application>().applicationContext)
+
+    // Signed-in FDV pilot, read from encrypted storage; an expired session counts as signed out
+    val fdvSession: StateFlow<FdvSession?> = sessionStore.session
+        .map { stored -> stored?.takeUnless { it.isExpired(System.currentTimeMillis()) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val state: StateFlow<AppState> =
         combine(
@@ -335,7 +339,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 viewModelScope.launch {
                     try {
                         val signedIn = FdvAuthClient.exchangeCode(result.code, verifier)
-                        _fdvSession.value = signedIn
+                        sessionStore.save(signedIn)
                         _events.tryEmit(UiEvent.Message("Signed in to FDV as ${signedIn.callsign ?: "pilot"}"))
                     } catch (e: FdvAuthException) {
                         _events.tryEmit(UiEvent.ExportError(e.message ?: "FDV sign-in failed"))
@@ -348,6 +352,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _events.subscriptionCount.first { it > 0 }
                 _events.emit(UiEvent.ExportError(result.message))
             }
+        }
+    }
+
+    fun signOutOfFdv() {
+        viewModelScope.launch {
+            val session = sessionStore.session.first()
+            // Clear locally first, so signing out works even with no connection
+            sessionStore.clear()
+            session?.let { FdvAuthClient.logout(it.token) }
+            _events.tryEmit(UiEvent.Message("Signed out of FDV"))
         }
     }
 

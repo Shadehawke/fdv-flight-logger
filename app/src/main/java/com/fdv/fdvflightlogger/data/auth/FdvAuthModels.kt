@@ -35,7 +35,8 @@ internal data class ApiError(
     val message: String? = null
 )
 
-/** A signed-in pilot, as the app keeps it. */
+/** A signed-in pilot, as the app keeps it (encrypted at rest by FdvSessionStore). */
+@Serializable
 data class FdvSession(
     val token: String,
     val expiresAtMillis: Long,
@@ -43,6 +44,8 @@ data class FdvSession(
     val firstName: String?,
     val lastName: String?
 ) {
+    fun isExpired(nowMillis: Long): Boolean = nowMillis >= expiresAtMillis
+
     // Data classes print every field by default; keep the token out of logs and crash reports
     override fun toString(): String =
         "FdvSession(callsign=$callsign, expiresAtMillis=$expiresAtMillis, token=***)"

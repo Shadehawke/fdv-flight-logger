@@ -3,6 +3,7 @@ package com.fdv.fdvflightlogger.data.auth
 import com.fdv.fdvflightlogger.data.network.AppHttp
 import io.ktor.client.request.accept
 import io.ktor.client.request.post
+import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -35,6 +36,20 @@ object FdvAuthClient {
             throw FdvAuthException("Couldn't reach FlyDeltaVirtual. Check your connection and try again.")
         }
         return interpret(status, body, System.currentTimeMillis())
+    }
+
+    /** Revokes the token on FDV's side. Best effort: if offline, the token still expires on its own. */
+    suspend fun logout(token: String) {
+        try {
+            AppHttp.client.post("${FdvAuth.API_BASE}/auth/logout") {
+                bearerAuth(token)
+                accept(ContentType.Application.Json)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            // Nothing to do; the local copy is already gone
+        }
     }
 
     /** Turns FDV's reply into a session or a readable error. Pure, so it's unit tested directly. */
