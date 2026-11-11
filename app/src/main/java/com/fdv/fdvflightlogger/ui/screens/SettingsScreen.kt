@@ -41,6 +41,8 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,6 +99,15 @@ fun SettingsScreen(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // Temporary while building sign-in; 3e turns this into a proper FDV account section
+            val context = LocalContext.current
+            OutlinedButton(
+                onClick = { appViewModel.startFdvSignIn(context) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Sign in with FDV")
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

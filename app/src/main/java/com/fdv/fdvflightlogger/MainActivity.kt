@@ -18,6 +18,8 @@ import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.UiEvent
 import com.fdv.fdvflightlogger.ui.nav.AppNavHost
 import com.fdv.fdvflightlogger.ui.theme.FDVFlightLoggerTheme
+import android.content.Intent
+import com.fdv.fdvflightlogger.data.auth.FdvAuth
 
 class MainActivity : ComponentActivity() {
 
@@ -28,6 +30,12 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_FDVFlightLogger)
 
         super.onCreate(savedInstanceState)
+
+        // Cold start from the redirect (savedInstanceState is null only on a genuinely new launch,
+        // so a rotation doesn't handle the same link twice)
+        if (savedInstanceState == null) handleAuthIntent(intent)
+        // Warm return: singleTask delivers the redirect to this running activity instead
+        addOnNewIntentListener { newIntent -> handleAuthIntent(newIntent) }
 
         setContent {
             val state = appViewModel.state.collectAsStateWithLifecycle().value
@@ -66,5 +74,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun handleAuthIntent(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (!uri.toString().startsWith(FdvAuth.REDIRECT_URI)) return
+
+        val params = uri.queryParameterNames.associateWith { uri.getQueryParameter(it) }
+        appViewModel.handleAuthRedirect(params)
     }
 }

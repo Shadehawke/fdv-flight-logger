@@ -13,10 +13,11 @@ lifecycle = "2.11.0"
 room = "2.8.5"
 splashscreen = "1.2.0"
 material = "1.14.0"
-kotlinxSerialization = "1.11.0"
+kotlinxSerialization = "1.12.0"
 ksp = "2.3.11"
 compose-material-icons = "1.7.8"
 ktor = "3.6.1"
+browser = "1.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,6 +51,7 @@ ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+androidx-browser = { module = "androidx.browser:browser", version.ref = "browser" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

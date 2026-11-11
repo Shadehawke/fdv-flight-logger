@@ -41,6 +41,13 @@ import com.fdv.fdvflightlogger.data.stats.StatsCalculator
 import kotlinx.coroutines.flow.flowOn
 import com.fdv.fdvflightlogger.data.history.LogbookHistory
 import kotlinx.coroutines.flow.map
+import android.content.ActivityNotFoundException
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.net.toUri
+import com.fdv.fdvflightlogger.data.auth.AuthCallback
+import com.fdv.fdvflightlogger.data.auth.FdvAuth
+import com.fdv.fdvflightlogger.data.auth.Pkce
+import com.fdv.fdvflightlogger.data.auth.PkceSession
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -65,6 +72,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val simBriefLoading: StateFlow<Boolean> = _simBriefLoading.asStateFlow()
     // Flips to true once airports.json is parsed, so stats recompute with distances included
     private val airportsReady = MutableStateFlow(AirportRepository.isLoaded)
+    // The secrets for a sign-in in progress; only needed until the browser comes back
+    private var pendingSignIn: PkceSession? = null
 
     val state: StateFlow<AppState> =
         combine(
@@ -288,6 +297,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 _simBriefLoading.value = false
             }
+        }
+    }
+
+    fun startFdvSignIn(context: Context, viaVatsim: Boolean = false) {
+        val session = Pkce.newSession()
+        pendingSignIn = session
+        try {
+            CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .build()
+                .launchUrl(context, FdvAuth.authorizeUrl(session, viaVatsim).toUri())
+        } catch (e: ActivityNotFoundException) {
+            pendingSignIn = null
+            _events.tryEmit(UiEvent.ExportError("No browser is installed to open FDV sign-in."))
+        }
+    }
+
+    fun handleAuthRedirect(params: Map<String, String?>) {
+        val session = pendingSignIn
+        // Single use: a replayed or second callback can never match again
+        pendingSignIn = null
+
+        when (val result = AuthCallback.parse(params, session?.state)) {
+            // 3c replaces this message with the token exchange
+            is AuthCallback.Code -> _events.tryEmit(UiEvent.Message("FDV sign-in code received"))
+            is AuthCallback.Failure -> _events.tryEmit(UiEvent.ExportError(result.message))
         }
     }
 
