@@ -48,6 +48,10 @@ import com.fdv.fdvflightlogger.data.auth.AuthCallback
 import com.fdv.fdvflightlogger.data.auth.FdvAuth
 import com.fdv.fdvflightlogger.data.auth.Pkce
 import com.fdv.fdvflightlogger.data.auth.PkceSession
+import com.fdv.fdvflightlogger.data.auth.FdvAuthClient
+import com.fdv.fdvflightlogger.data.auth.FdvAuthException
+import com.fdv.fdvflightlogger.data.auth.FdvSession
+import android.util.Log
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -74,6 +78,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val airportsReady = MutableStateFlow(AirportRepository.isLoaded)
     // The secrets for a sign-in in progress; only needed until the browser comes back
     private var pendingSignIn: PkceSession? = null
+
+    // Signed-in FDV pilot; in memory only until 3d stores it encrypted
+    private val _fdvSession = MutableStateFlow<FdvSession?>(null)
+    val fdvSession: StateFlow<FdvSession?> = _fdvSession.asStateFlow()
 
     val state: StateFlow<AppState> =
         combine(
@@ -318,11 +326,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val session = pendingSignIn
         // Single use: a replayed or second callback can never match again
         pendingSignIn = null
+        Log.d("FdvAuth", "handleAuthRedirect: pending session=${session != null}")
 
         when (val result = AuthCallback.parse(params, session?.state)) {
-            // 3c replaces this message with the token exchange
-            is AuthCallback.Code -> _events.tryEmit(UiEvent.Message("FDV sign-in code received"))
-            is AuthCallback.Failure -> _events.tryEmit(UiEvent.ExportError(result.message))
+            is AuthCallback.Code -> {
+                // parse() only returns Code when a session existed, but the compiler can't know that
+                val verifier = session?.verifier ?: return
+                viewModelScope.launch {
+                    try {
+                        val signedIn = FdvAuthClient.exchangeCode(result.code, verifier)
+                        _fdvSession.value = signedIn
+                        _events.tryEmit(UiEvent.Message("Signed in to FDV as ${signedIn.callsign ?: "pilot"}"))
+                    } catch (e: FdvAuthException) {
+                        _events.tryEmit(UiEvent.ExportError(e.message ?: "FDV sign-in failed"))
+                    }
+                }
+            }
+            is AuthCallback.Failure -> viewModelScope.launch {
+                // On a cold start from the redirect, MainActivity's snackbar collector isn't running yet.
+                // Wait until something is listening, so the message isn't silently dropped.
+                _events.subscriptionCount.first { it > 0 }
+                _events.emit(UiEvent.ExportError(result.message))
+            }
         }
     }
 

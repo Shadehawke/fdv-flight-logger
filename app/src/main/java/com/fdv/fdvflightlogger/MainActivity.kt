@@ -20,6 +20,7 @@ import com.fdv.fdvflightlogger.ui.nav.AppNavHost
 import com.fdv.fdvflightlogger.ui.theme.FDVFlightLoggerTheme
 import android.content.Intent
 import com.fdv.fdvflightlogger.data.auth.FdvAuth
+import android.util.Log
 
 class MainActivity : ComponentActivity() {
 
@@ -30,6 +31,7 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_FDVFlightLogger)
 
         super.onCreate(savedInstanceState)
+        Log.d("FdvAuth", "onCreate: fresh=${savedInstanceState == null}, task=$taskId")
 
         // Cold start from the redirect (savedInstanceState is null only on a genuinely new launch,
         // so a rotation doesn't handle the same link twice)
@@ -80,6 +82,12 @@ class MainActivity : ComponentActivity() {
         val uri = intent?.data ?: return
         if (!uri.toString().startsWith(FdvAuth.REDIRECT_URI)) return
 
+        // Never log the code itself; just whether it arrived and which copy of the app got it
+        Log.d(
+            "FdvAuth",
+            "Redirect received by $packageName (task $taskId): " +
+                    "code=${uri.getQueryParameter("code") != null}, error=${uri.getQueryParameter("error")}"
+        )
         val params = uri.queryParameterNames.associateWith { uri.getQueryParameter(it) }
         appViewModel.handleAuthRedirect(params)
     }
