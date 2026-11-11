@@ -98,6 +98,10 @@ import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material3.ListItem
+import com.fdv.fdvflightlogger.data.fdv.FdvBid
+import com.fdv.fdvflightlogger.data.fdv.FdvBidPlan
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -251,6 +255,24 @@ fun FlightLogScreen(
         }
     }
 
+    val fdvSession by appViewModel.fdvSession.collectAsStateWithLifecycle()
+    val bidLoading by appViewModel.bidLoading.collectAsStateWithLifecycle()
+    val confirmBid = rememberSaveable { mutableStateOf(false) }
+    // Plain remember: FdvBid isn't saveable, and after a rotation the pilot can simply tap again
+    var bidChoices by remember { mutableStateOf<List<FdvBid>>(emptyList()) }
+
+    // Bookings go through the SimBrief mapper; gates are the one thing a bid adds on top
+    val applyBid: (FdvBidPlan) -> Unit = { bid ->
+        draft = bid.plan.applyTo(draft, state.settings).copy(
+            depGate = bid.depGate ?: draft.depGate,
+            arrGate = bid.arrGate ?: draft.arrGate
+        )
+    }
+
+    val startFromBid = {
+        appViewModel.startFromBid(onChoose = { bidChoices = it }, onLoaded = applyBid)
+    }
+
     val isDirty = draft.normalizedForDirtyCheck() != initialDraft.normalizedForDirtyCheck()
 
     val widthClass = rememberWindowWidthClass()
@@ -361,6 +383,62 @@ fun FlightLogScreen(
         )
     }
 
+    if (confirmBid.value) {
+        AlertDialog(
+            onDismissRequest = { confirmBid.value = false },
+            title = { Text("Start from your FDV booking?") },
+            text = {
+                Text(
+                    "Your booking will replace the planned fields in this flight, including FDV's " +
+                            "assigned gates. ATC info and your scratchpad are kept."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmBid.value = false
+                    startFromBid()
+                }) { Text("Load booking") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmBid.value = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (bidChoices.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { bidChoices = emptyList() },
+            title = { Text("Choose a booking") },
+            text = {
+                // Scrolls if a pilot has more bookings than fit on screen
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    bidChoices.forEach { bid ->
+                        ListItem(
+                            headlineContent = { Text("${bid.callsign}  ${bid.dep} → ${bid.arr}") },
+                            supportingContent = {
+                                Text(
+                                    listOfNotNull(
+                                        bid.aircraft,
+                                        bid.departUtc?.let { "dep ${it}Z" },
+                                        if (bid.hasSimBrief) "SimBrief plan" else null
+                                    ).joinToString(" · ")
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                bidChoices = emptyList()
+                                appViewModel.loadBid(bid.id, applyBid)
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { bidChoices = emptyList() }) { Text("Cancel") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -372,6 +450,32 @@ fun FlightLogScreen(
                     actionIconContentColor = Color.White
                 ),
                 actions = {
+                    // Only offered when signed in to FDV; the session is read from encrypted storage
+                    if (fdvSession != null) {
+                        IconButton(
+                            onClick = {
+                                if (draft.dep.isBlank() && draft.arr.isBlank()) {
+                                    startFromBid()
+                                } else {
+                                    confirmBid.value = true
+                                }
+                            },
+                            enabled = !bidLoading
+                        ) {
+                            if (bidLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.FlightTakeoff,
+                                    contentDescription = "Start from my FDV booking"
+                                )
+                            }
+                        }
+                    }
                     IconButton(
                         onClick = {
                             // Only ask for confirmation when there's something to overwrite

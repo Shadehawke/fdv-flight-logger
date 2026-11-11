@@ -55,6 +55,8 @@ import com.fdv.fdvflightlogger.data.auth.FdvSessionStore
 import com.fdv.fdvflightlogger.data.fdv.FdvApi
 import com.fdv.fdvflightlogger.data.fdv.FdvApiException
 import com.fdv.fdvflightlogger.data.fdv.FdvPilot
+import com.fdv.fdvflightlogger.data.fdv.FdvBid
+import com.fdv.fdvflightlogger.data.fdv.FdvBidPlan
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -95,6 +97,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _fdvRefreshing = MutableStateFlow(false)
     val fdvRefreshing: StateFlow<Boolean> = _fdvRefreshing.asStateFlow()
+
+    private val _bidLoading = MutableStateFlow(false)
+    val bidLoading: StateFlow<Boolean> = _bidLoading.asStateFlow()
 
     val state: StateFlow<AppState> =
         combine(
@@ -408,6 +413,70 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 _fdvRefreshing.value = false
             }
+        }
+    }
+
+    /**
+     * Fetches the pilot's FDV bookings. One booking is loaded straight away and handed to [onLoaded];
+     * several are handed to [onChoose] so the screen can show a picker.
+     */
+    fun startFromBid(onChoose: (List<FdvBid>) -> Unit, onLoaded: (FdvBidPlan) -> Unit) {
+        if (_bidLoading.value) return
+        viewModelScope.launch {
+            _bidLoading.value = true
+            try {
+                val bids = fdvCall { token -> FdvApi.bids(token) } ?: return@launch
+                when (bids.size) {
+                    0 -> _events.tryEmit(UiEvent.Message("You have no booked flights on FDV"))
+                    1 -> fetchBid(bids.single().id, onLoaded)
+                    else -> onChoose(bids)
+                }
+            } finally {
+                _bidLoading.value = false
+            }
+        }
+    }
+
+    /** Loads one booking the pilot picked from the list. */
+    fun loadBid(id: Long, onLoaded: (FdvBidPlan) -> Unit) {
+        if (_bidLoading.value) return
+        viewModelScope.launch {
+            _bidLoading.value = true
+            try {
+                fetchBid(id, onLoaded)
+            } finally {
+                _bidLoading.value = false
+            }
+        }
+    }
+
+    private suspend fun fetchBid(id: Long, onLoaded: (FdvBidPlan) -> Unit) {
+        val bid = fdvCall { token -> FdvApi.bid(token, id) } ?: return
+        onLoaded(bid)
+        val callsign = listOfNotNull(bid.plan.airline, bid.plan.flightNumber).joinToString("")
+        _events.tryEmit(UiEvent.Message("Loaded $callsign ${bid.plan.dep} → ${bid.plan.arr} from FDV"))
+    }
+
+    /**
+     * Runs an FDV API call with the stored session. Errors become snackbars, and a 401 signs out.
+     * Returns null when the call couldn't be made or failed, so callers just stop.
+     */
+    private suspend fun <T> fdvCall(block: suspend (token: String) -> T): T? {
+        val session = sessionStore.session.first()
+            ?.takeUnless { it.isExpired(System.currentTimeMillis()) }
+        if (session == null) {
+            _events.tryEmit(UiEvent.Message("Sign in to FDV in Settings first"))
+            return null
+        }
+        return try {
+            block(session.token)
+        } catch (e: FdvApiException) {
+            if (e.signedOut) {
+                sessionStore.clear()
+                _fdvPilot.value = null
+            }
+            _events.tryEmit(UiEvent.ExportError(e.message ?: "FlyDeltaVirtual request failed"))
+            null
         }
     }
 
