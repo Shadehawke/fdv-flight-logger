@@ -43,6 +43,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.LaunchedEffect
+import com.fdv.fdvflightlogger.ui.components.FdvAccountCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +80,25 @@ fun SettingsScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            val context = LocalContext.current
+            val fdvSession by appViewModel.fdvSession.collectAsStateWithLifecycle()
+            val fdvPilot by appViewModel.fdvPilot.collectAsStateWithLifecycle()
+            val fdvRefreshing by appViewModel.fdvRefreshing.collectAsStateWithLifecycle()
+
+            // After an app restart the session is stored but the profile isn't; fetch it once here
+            LaunchedEffect(fdvSession) {
+                if (fdvSession != null && fdvPilot == null) appViewModel.refreshFdvProfile(quiet = true)
+            }
+
+            FdvAccountCard(
+                session = fdvSession,
+                pilot = fdvPilot,
+                refreshing = fdvRefreshing,
+                onSignIn = { appViewModel.startFdvSignIn(context) },
+                onRefresh = { appViewModel.refreshFdvProfile() },
+                onSignOut = { appViewModel.signOutOfFdv() }
+            )
+
             // Local text wins once the user starts typing, so DataStore's async
             // round-trip can't overwrite characters mid-edit
             var aliasText by rememberSaveable { mutableStateOf<String?>(null) }
@@ -99,28 +120,6 @@ fun SettingsScreen(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-
-            // Temporary while building sign-in; 3e turns this into a proper FDV account section
-            val context = LocalContext.current
-            val fdvSession by appViewModel.fdvSession.collectAsStateWithLifecycle()
-            // A delegated property can't be smart-cast, so copy it to a local first
-            val session = fdvSession
-
-            if (session == null) {
-                OutlinedButton(
-                    onClick = { appViewModel.startFdvSignIn(context) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Sign in with FDV")
-                }
-            } else {
-                OutlinedButton(
-                    onClick = { appViewModel.signOutOfFdv() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Sign out of FDV (${session.callsign ?: "pilot"})")
-                }
-            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

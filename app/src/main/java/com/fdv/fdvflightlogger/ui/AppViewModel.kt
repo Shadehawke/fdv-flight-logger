@@ -51,8 +51,10 @@ import com.fdv.fdvflightlogger.data.auth.PkceSession
 import com.fdv.fdvflightlogger.data.auth.FdvAuthClient
 import com.fdv.fdvflightlogger.data.auth.FdvAuthException
 import com.fdv.fdvflightlogger.data.auth.FdvSession
-import android.util.Log
 import com.fdv.fdvflightlogger.data.auth.FdvSessionStore
+import com.fdv.fdvflightlogger.data.fdv.FdvApi
+import com.fdv.fdvflightlogger.data.fdv.FdvApiException
+import com.fdv.fdvflightlogger.data.fdv.FdvPilot
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -86,6 +88,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val fdvSession: StateFlow<FdvSession?> = sessionStore.session
         .map { stored -> stored?.takeUnless { it.isExpired(System.currentTimeMillis()) } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // The pilot's FDV profile from /me; fetched after sign-in and when Settings opens
+    private val _fdvPilot = MutableStateFlow<FdvPilot?>(null)
+    val fdvPilot: StateFlow<FdvPilot?> = _fdvPilot.asStateFlow()
+
+    private val _fdvRefreshing = MutableStateFlow(false)
+    val fdvRefreshing: StateFlow<Boolean> = _fdvRefreshing.asStateFlow()
 
     val state: StateFlow<AppState> =
         combine(
@@ -330,7 +339,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val session = pendingSignIn
         // Single use: a replayed or second callback can never match again
         pendingSignIn = null
-        Log.d("FdvAuth", "handleAuthRedirect: pending session=${session != null}")
 
         when (val result = AuthCallback.parse(params, session?.state)) {
             is AuthCallback.Code -> {
@@ -341,6 +349,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         val signedIn = FdvAuthClient.exchangeCode(result.code, verifier)
                         sessionStore.save(signedIn)
                         _events.tryEmit(UiEvent.Message("Signed in to FDV as ${signedIn.callsign ?: "pilot"}"))
+                        refreshFdvProfile(quiet = true)
                     } catch (e: FdvAuthException) {
                         _events.tryEmit(UiEvent.ExportError(e.message ?: "FDV sign-in failed"))
                     }
@@ -360,8 +369,45 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val session = sessionStore.session.first()
             // Clear locally first, so signing out works even with no connection
             sessionStore.clear()
+            _fdvPilot.value = null
             session?.let { FdvAuthClient.logout(it.token) }
             _events.tryEmit(UiEvent.Message("Signed out of FDV"))
+        }
+    }
+
+    /** Loads /me and copies callsign, name and hub into the pilot profile. */
+    fun refreshFdvProfile(quiet: Boolean = false) {
+        if (_fdvRefreshing.value) return
+        viewModelScope.launch {
+            // Set before the first suspension so a second tap can't start a parallel request
+            _fdvRefreshing.value = true
+            try {
+                val session = sessionStore.session.first()
+                    ?.takeUnless { it.isExpired(System.currentTimeMillis()) }
+                    ?: return@launch
+
+                val pilot = FdvApi.me(session.token)
+                _fdvPilot.value = pilot
+
+                // FDV is the source of truth while signed in; keep local values where FDV sent none
+                val current = repo.pilotProfileFlow.first()
+                repo.savePilotProfile(
+                    current.copy(
+                        pilotId = pilot.callsign,
+                        name = pilot.name.ifBlank { current.name },
+                        hub = pilot.hubIcao ?: current.hub
+                    )
+                )
+                if (!quiet) _events.tryEmit(UiEvent.Message("FDV profile updated"))
+            } catch (e: FdvApiException) {
+                if (e.signedOut) {
+                    sessionStore.clear()
+                    _fdvPilot.value = null
+                }
+                _events.tryEmit(UiEvent.ExportError(e.message ?: "Couldn't load your FDV profile"))
+            } finally {
+                _fdvRefreshing.value = false
+            }
         }
     }
 
