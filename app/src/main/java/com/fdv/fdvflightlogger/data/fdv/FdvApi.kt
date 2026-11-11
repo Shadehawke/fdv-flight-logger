@@ -13,6 +13,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.io.IOException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonArray
 
 /** [signedOut] is true when FDV rejected the token, so the app should drop the stored session. */
 class FdvApiException(message: String, val signedOut: Boolean = false) : Exception(message)
@@ -27,6 +29,18 @@ object FdvApi {
     suspend fun me(token: String): FdvPilot {
         val (status, body) = get("/me", token)
         return interpretMe(status, body)
+    }
+
+    @Throws(FdvApiException::class)
+    suspend fun bids(token: String): List<FdvBid> {
+        val (status, body) = get("/bids", token)
+        return interpretBids(status, body)
+    }
+
+    @Throws(FdvApiException::class)
+    suspend fun bid(token: String, id: Long): FdvBidPlan {
+        val (status, body) = get("/bids/$id", token)
+        return interpretBid(status, body)
     }
 
     private suspend fun get(path: String, token: String): Pair<Int, String> = try {
@@ -67,6 +81,26 @@ object FdvApi {
         )
     }
 
+    internal fun interpretBids(status: Int, body: String): List<FdvBid> {
+        // The list comes as {"data": [...]}; okObject only unwraps objects, so it hands back the root
+        val list = okObject(status, body)["data"] as? JsonArray ?: throw FdvApiException(UNREADABLE)
+        val dtos = try {
+            AppHttp.json.decodeFromJsonElement(ListSerializer(BidDto.serializer()), list)
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        return dtos.mapNotNull(FdvBidMapper::toBid)
+    }
+
+    internal fun interpretBid(status: Int, body: String): FdvBidPlan {
+        val dto = try {
+            AppHttp.json.decodeFromJsonElement(BidDto.serializer(), okObject(status, body))
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        return FdvBidMapper.toBidPlan(dto) ?: throw FdvApiException(UNREADABLE)
+    }
+
     /**
      * Shared by every endpoint: maps 401 and other errors, then returns the JSON object.
      * Laravel APIs often wrap results as {"data": {...}}, so that's unwrapped when present.
@@ -93,4 +127,5 @@ object FdvApi {
     } catch (e: SerializationException) {
         null
     }
+
 }
