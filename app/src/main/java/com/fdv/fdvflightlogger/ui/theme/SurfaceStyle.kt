@@ -19,7 +19,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
+import android.graphics.Paint as AndroidPaint
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.lerp
@@ -74,16 +75,20 @@ fun Modifier.raised(
             val radius = cornerRadius.toPx()
             val offset = elevation.toPx()
             val blur = offset * 2f
-            val paint = Paint()
-            val framework = paint.asFrameworkPaint().apply { color = colors.base.toArgb() }
+            // Android's own Paint: setShadowLayer has no Compose equivalent.
+            // ANTI_ALIAS_FLAG matters: Compose's Paint smooths edges by default, Android's doesn't.
+            val shadowPaint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+                color = colors.base.toArgb()
+            }
 
             onDrawBehind {
                 drawIntoCanvas { canvas ->
+                    val native = canvas.nativeCanvas
                     // setShadowLayer is hardware-accelerated for round rects on API 28+ (minSdk is 31)
-                    framework.setShadowLayer(blur, offset, offset, colors.shadow.toArgb())
-                    canvas.drawRoundRect(0f, 0f, size.width, size.height, radius, radius, paint)
-                    framework.setShadowLayer(blur, -offset, -offset, colors.highlight.toArgb())
-                    canvas.drawRoundRect(0f, 0f, size.width, size.height, radius, radius, paint)
+                    shadowPaint.setShadowLayer(blur, offset, offset, colors.shadow.toArgb())
+                    native.drawRoundRect(0f, 0f, size.width, size.height, radius, radius, shadowPaint)
+                    shadowPaint.setShadowLayer(blur, -offset, -offset, colors.highlight.toArgb())
+                    native.drawRoundRect(0f, 0f, size.width, size.height, radius, radius, shadowPaint)
                 }
             }
         }
