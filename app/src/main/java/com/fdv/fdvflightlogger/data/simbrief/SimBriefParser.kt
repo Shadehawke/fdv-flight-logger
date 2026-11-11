@@ -1,43 +1,47 @@
 package com.fdv.fdvflightlogger.data.simbrief
 
+import com.fdv.fdvflightlogger.data.network.AppHttp
 import com.fdv.fdvflightlogger.data.prefs.WeightUnit
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.roundToInt
 
 object SimBriefParser {
 
     @Throws(SimBriefException::class)
     fun parse(json: String): SimBriefPlan {
+        // SimBrief's shapes are too loose for @Serializable classes, so walk the JSON tree by hand
         val root = try {
-            JSONObject(json)
-        } catch (e: JSONException) {
-            throw SimBriefException("SimBrief sent a response the app couldn't read.")
-        }
+            AppHttp.json.parseToJsonElement(json) as? JsonObject
+        } catch (e: SerializationException) {
+            null
+        } ?: throw SimBriefException("SimBrief sent a response the app couldn't read.")
 
-        val origin = root.optJSONObject("origin")
+        val origin = root.obj("origin")
             ?: throw SimBriefException("Your latest SimBrief plan has no departure airport.")
-        val destination = root.optJSONObject("destination")
+        val destination = root.obj("destination")
             ?: throw SimBriefException("Your latest SimBrief plan has no arrival airport.")
         val dep = origin.str("icao_code")
             ?: throw SimBriefException("Your latest SimBrief plan has no departure airport.")
         val arr = destination.str("icao_code")
             ?: throw SimBriefException("Your latest SimBrief plan has no arrival airport.")
 
-        val general = root.optJSONObject("general")
-        val fuel = root.optJSONObject("fuel")
-        val weights = root.optJSONObject("weights")
-        val times = root.optJSONObject("times")
-        val aircraft = root.optJSONObject("aircraft")
+        val general = root.obj("general")
+        val fuel = root.obj("fuel")
+        val weights = root.obj("weights")
+        val times = root.obj("times")
+        val aircraft = root.obj("aircraft")
 
         val depRwy = origin.str("plan_rwy")
-        val takeoff = root.optJSONObject("tlr")?.optJSONObject("takeoff")
-        val landing = root.optJSONObject("tlr")?.optJSONObject("landing")
+        val takeoff = root.obj("tlr")?.obj("takeoff")
+        val landing = root.obj("tlr")?.obj("landing")
         // Takeoff performance is listed for every runway; we want the one actually planned
         val takeoffRunway = takeoff?.objects("runway")?.firstOrNull { it.str("identifier") == depRwy }
 
-        val units = root.optJSONObject("params")?.str("units")
+        val units = root.obj("params")?.str("units")
 
         return SimBriefPlan(
             dep = dep,
@@ -70,19 +74,19 @@ object SimBriefParser {
 
             takeoffFlaps = takeoffRunway?.str("flap_setting"),
             v2 = takeoffRunway?.str("speeds_v2"),
-            landingFlaps = landing?.optJSONObject("conditions")?.str("flap_setting"),
-            vref = landing?.optJSONObject("distance_dry")?.str("speeds_vref"),
-            depAltimeter = takeoff?.optJSONObject("conditions")?.str("altimeter"),
-            arrAltimeter = landing?.optJSONObject("conditions")?.str("altimeter")
+            landingFlaps = landing?.obj("conditions")?.str("flap_setting"),
+            vref = landing?.obj("distance_dry")?.str("speeds_vref"),
+            depAltimeter = takeoff?.obj("conditions")?.str("altimeter"),
+            arrAltimeter = landing?.obj("conditions")?.str("altimeter")
         )
     }
 
     // SimBrief has no single cruise OAT, so average the temperature at every cruise-stage waypoint
-    private fun averageCruiseOat(root: JSONObject): Int? {
+    private fun averageCruiseOat(root: JsonObject): Int? {
         // v2 sends navlog as a list; the older format wrapped it as navlog.fix
-        val fixes = when (val navlog = root.opt("navlog")) {
-            is JSONArray -> navlog.objectList()
-            is JSONObject -> navlog.objects("fix")
+        val fixes = when (val navlog = root["navlog"]) {
+            is JsonArray -> navlog.filterIsInstance<JsonObject>()
+            is JsonObject -> navlog.objects("fix")
             else -> emptyList()
         }
         val temps = fixes
@@ -100,22 +104,22 @@ object SimBriefParser {
         return hours.toString().padStart(2, '0') + minutes.toString().padStart(2, '0')
     }
 
-    // SimBrief sends values as strings, and may send {} or "" for "nothing"; treat both as absent
-    private fun JSONObject.str(key: String): String? = when (val v = opt(key)) {
-        is String -> v.trim().takeIf { it.isNotEmpty() }
-        is Number -> v.toString()
-        else -> null
+    // SimBrief sends values as strings, and may send {} or "" for "nothing"; treat both as absent.
+    // JsonNull is itself a JsonPrimitive (its content is the text "null"), so it's excluded explicitly.
+    private fun JsonObject.str(key: String): String? {
+        val value = this[key] as? JsonPrimitive ?: return null
+        if (value is JsonNull) return null
+        return value.content.trim().takeIf { it.isNotEmpty() }
     }
 
-    private fun JSONObject.num(key: String): Double? = str(key)?.toDoubleOrNull()
+    private fun JsonObject.num(key: String): Double? = str(key)?.toDoubleOrNull()
+
+    private fun JsonObject.obj(key: String): JsonObject? = this[key] as? JsonObject
 
     // A key that may hold one object or a list of them (SimBrief does both, e.g. alternates)
-    private fun JSONObject.objects(key: String): List<JSONObject> = when (val v = opt(key)) {
-        is JSONArray -> v.objectList()
-        is JSONObject -> listOf(v)
+    private fun JsonObject.objects(key: String): List<JsonObject> = when (val value = this[key]) {
+        is JsonArray -> value.filterIsInstance<JsonObject>()
+        is JsonObject -> listOf(value)
         else -> emptyList()
     }
-
-    private fun JSONArray.objectList(): List<JSONObject> =
-        (0 until length()).mapNotNull { optJSONObject(it) }
 }

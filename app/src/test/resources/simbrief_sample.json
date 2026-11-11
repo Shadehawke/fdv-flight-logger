@@ -1,0 +1,70 @@
+{
+  "params": { "units": "lbs" },
+  "general": {
+    "icao_airline": "DAL",
+    "flight_number": "366",
+    "costindex": "21",
+    "initial_altitude": "35000",
+    "avg_wind_dir": "283",
+    "avg_wind_spd": "024",
+    "route": "BROAK1 MAXXO DCT IRW DCT FSM DCT MEMFS DCT HUTCC DCT KNSAW DCT RUSSA GLAVN2",
+    "sid_ident": "BROAK1",
+    "star_ident": "GLAVN2"
+  },
+  "origin": { "icao_code": "KPHX", "plan_rwy": "25R" },
+  "destination": { "icao_code": "KATL", "plan_rwy": "26R" },
+  "alternate": [ { "icao_code": "KHSV", "plan_rwy": "36L" } ],
+  "tlr": {
+    "takeoff": {
+      "conditions": { "airport_icao": "KPHX", "altimeter": "29.87" },
+      "runway": [
+        { "identifier": "07L", "flap_setting": "1", "speeds_v2": "157" },
+        { "identifier": "07R", "flap_setting": "3", "speeds_v2": "" },
+        { "identifier": "08",  "flap_setting": "1", "speeds_v2": "158" },
+        { "identifier": "25L", "flap_setting": "2", "speeds_v2": "149" },
+        { "identifier": "25R", "flap_setting": "2", "speeds_v2": "154" },
+        { "identifier": "26",  "flap_setting": "2", "speeds_v2": "160" }
+      ]
+    },
+    "landing": {
+      "conditions": { "airport_icao": "KATL", "flap_setting": "FULL", "altimeter": "30.16" },
+      "distance_dry": { "speeds_vref": "141" }
+    }
+  },
+  "aircraft": { "icaocode": "A21N", "icao_code": "A21N" },
+  "fuel": { "plan_ramp": "25696", "reserve": "1316" },
+  "times": { "est_block": "03:34:27", "est_time_enroute": "03:06:27" },
+  "weights": { "payload": "53793", "est_zfw": "163098", "pax_count": "244" },
+  "navlog": [
+    {"ident": "JUTAK", "stage": "CLB", "oat": "16"},
+    {"ident": "WETAL", "stage": "CLB", "oat": "10"},
+    {"ident": "RIICH", "stage": "CLB", "oat": "8"},
+    {"ident": "PYPPE", "stage": "CLB", "oat": "4"},
+    {"ident": "BARLL", "stage": "CLB", "oat": "-6"},
+    {"ident": "BROAK", "stage": "CLB", "oat": "-14"},
+    {"ident": "FTHLS", "stage": "CLB", "oat": "-26"},
+    {"ident": "JNIPR", "stage": "CLB", "oat": "-37"},
+    {"ident": "TOC",   "stage": "CLB", "oat": "-48"},
+    {"ident": "JSSUA", "stage": "CRZ", "oat": "-48"},
+    {"ident": "MAXXO", "stage": "CRZ", "oat": "-48"},
+    {"ident": "IRW",   "stage": "CRZ", "oat": "-48"},
+    {"ident": "FSM",   "stage": "CRZ", "oat": "-48"},
+    {"ident": "MEMFS", "stage": "CRZ", "oat": "-47"},
+    {"ident": "HUTCC", "stage": "CRZ", "oat": "-44"},
+    {"ident": "KNSAW", "stage": "CRZ", "oat": "-43"},
+    {"ident": "RUSSA", "stage": "CRZ", "oat": "-43"},
+    {"ident": "RUTTH", "stage": "CRZ", "oat": "-43"},
+    {"ident": "JKSON", "stage": "CRZ", "oat": "-42"},
+    {"ident": "MADDX", "stage": "CRZ", "oat": "-41"},
+    {"ident": "TOD",   "stage": "CRZ", "oat": "-41"},
+    {"ident": "GLAVN", "stage": "DSC", "oat": "-35"},
+    {"ident": "STHRN", "stage": "DSC", "oat": "-29"},
+    {"ident": "HOGGG", "stage": "DSC", "oat": "-20"},
+    {"ident": "RAIIN", "stage": "DSC", "oat": "-12"},
+    {"ident": "KLOWD", "stage": "DSC", "oat": "-7"},
+    {"ident": "SWEPT", "stage": "DSC", "oat": "-2"},
+    {"ident": "KYMMY", "stage": "DSC", "oat": "5"},
+    {"ident": "KEAVY", "stage": "DSC", "oat": "7"},
+    {"ident": "KATL",  "stage": "DSC", "oat": "16"}
+  ]
+}
