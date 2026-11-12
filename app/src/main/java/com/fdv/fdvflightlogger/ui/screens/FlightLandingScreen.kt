@@ -57,6 +57,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import com.fdv.fdvflightlogger.data.fdv.FdvPilot
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -66,6 +68,7 @@ fun FlightLandingScreen(
     appViewModel: AppViewModel,
     navController: NavController
 ) {
+    val fdvPilot by appViewModel.fdvPilot.collectAsStateWithLifecycle()
     val state by appViewModel.state.collectAsStateWithLifecycle()
     val stats by appViewModel.stats.collectAsStateWithLifecycle()
 
@@ -110,6 +113,10 @@ fun FlightLandingScreen(
                     hub = state.profile.hub,
                     lastLanded = state.lastLanded
                 )
+
+                fdvPilot?.let { pilot ->
+                    FdvPilotCard(pilot = pilot, onClick = { navController.navigate(Routes.SETTINGS) })
+                }
 
                 DashboardActions(
                     onNewFlight = { navController.navigate(Routes.FLIGHT_LOG) },
@@ -175,6 +182,69 @@ private fun Greeting(name: String, hub: String, lastLanded: String) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun FdvPilotCard(pilot: FdvPilot, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .raised(raisedColors())
+            // Same radius as raised()'s default, so the ripple matches the card's corners
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "FlyDeltaVirtual",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = pilot.rank ?: pilot.callsign,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            val totals = listOfNotNull(
+                pilot.hours?.let { "%,.1f hrs".format(it) },
+                pilot.flights?.let { "%,d flights".format(it) }
+            ).joinToString(" • ")
+            if (totals.isNotEmpty()) {
+                Text(
+                    text = totals,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        pilot.streakCurrent?.let { streak ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.LocalFireDepartment,
+                        contentDescription = null,   // the text beside it says what it is
+                        // Dimmed when the streak has lapsed, so a 0 doesn't look like a highlight
+                        tint = if (streak > 0) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(text = "%,d".format(streak), style = MaterialTheme.typography.titleLarge)
+                }
+                Text(
+                    text = pilot.streakBest?.let { "streak · best %,d".format(it) } ?: "streak",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

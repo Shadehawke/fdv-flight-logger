@@ -172,6 +172,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             AirportRepository.ensureLoaded(getApplication())
             airportsReady.value = true
         }
+        // Signed in from an earlier session: load the FDV profile once, so the dashboard has it
+        viewModelScope.launch {
+            if (sessionStore.session.first() != null) refreshFdvProfile(quiet = true)
+        }
     }
 
     fun saveFlight(draft: FlightDraft) {
