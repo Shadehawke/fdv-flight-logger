@@ -15,14 +15,23 @@ import kotlinx.serialization.json.contentOrNull
 import java.io.IOException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray
+import io.ktor.http.HttpHeaders
 
-/** [signedOut] is true when FDV rejected the token, so the app should drop the stored session. */
-class FdvApiException(message: String, val signedOut: Boolean = false) : Exception(message)
+/**
+ * [signedOut] is true when FDV rejected the token, so the app should drop the stored session.
+ * [retryAfterSeconds] is set on HTTP 429, so a long-running import can wait and carry on.
+ */
+class FdvApiException(
+    message: String,
+    val signedOut: Boolean = false,
+    val retryAfterSeconds: Int? = null
+) : Exception(message)
 
 /** Authenticated calls to the FDV App API. Every call takes the session token. */
 object FdvApi {
 
     private const val UNREADABLE = "FlyDeltaVirtual sent a response the app couldn't read."
+    private const val PIREP_PAGE_SIZE = 50   // the API's maximum
     private const val SIGNED_OUT = "Your FDV sign-in has expired. Sign in again."
 
     @Throws(FdvApiException::class)
@@ -43,11 +52,31 @@ object FdvApi {
         return interpretBid(status, body)
     }
 
+    /** One page of the logbook, newest first. [afterId] limits it to flights newer than that one. */
+    @Throws(FdvApiException::class)
+    suspend fun pireps(token: String, page: Int = 1, afterId: Long? = null): FdvPirepPage {
+        val path = buildString {
+            append("/pireps?per_page=$PIREP_PAGE_SIZE&page=$page")
+            if (afterId != null) append("&after_id=$afterId")
+        }
+        val (status, body) = get(path, token)
+        return interpretPireps(status, body)
+    }
+
+    /** One PIREP in full; the only source of air time. */
+    @Throws(FdvApiException::class)
+    suspend fun pirep(token: String, id: Long): FdvPirep {
+        val (status, body) = get("/pireps/$id", token)
+        return interpretPirep(status, body)
+    }
+
     private suspend fun get(path: String, token: String): Pair<Int, String> = try {
         val response = AppHttp.client.get("${FdvAuth.API_BASE}$path") {
             bearerAuth(token)
             accept(ContentType.Application.Json)
         }
+        // 60 requests a minute per pilot; FDV says how long to wait
+        if (response.status.value == 429) throw rateLimited(response.headers[HttpHeaders.RetryAfter])
         response.status.value to response.bodyAsText()
     } catch (e: CancellationException) {
         throw e
@@ -99,6 +128,43 @@ object FdvApi {
             throw FdvApiException(UNREADABLE)
         }
         return FdvBidMapper.toBidPlan(dto) ?: throw FdvApiException(UNREADABLE)
+    }
+
+    internal fun interpretPireps(status: Int, body: String): FdvPirepPage {
+        val root = okObject(status, body)
+        val list = root["data"] as? JsonArray ?: throw FdvApiException(UNREADABLE)
+        val (dtos, meta) = try {
+            AppHttp.json.decodeFromJsonElement(ListSerializer(PirepDto.serializer()), list) to
+                    root["meta"]?.let { AppHttp.json.decodeFromJsonElement(PageMetaDto.serializer(), it) }
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        val page = meta?.page ?: 1
+        return FdvPirepPage(
+            pireps = dtos.mapNotNull(FdvPirepMapper::toPirep),
+            page = page,
+            // Without meta, treat this as the last page so a loop can never run forever
+            lastPage = meta?.lastPage ?: page,
+            total = meta?.total
+        )
+    }
+
+    internal fun interpretPirep(status: Int, body: String): FdvPirep {
+        val dto = try {
+            AppHttp.json.decodeFromJsonElement(PirepDto.serializer(), okObject(status, body))
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        return FdvPirepMapper.toPirep(dto) ?: throw FdvApiException(UNREADABLE)
+    }
+
+    internal fun rateLimited(retryAfter: String?): FdvApiException {
+        val seconds = retryAfter?.trim()?.toIntOrNull()?.takeIf { it > 0 }
+        val wait = seconds?.let { "in $it seconds" } ?: "in a minute"
+        return FdvApiException(
+            "FlyDeltaVirtual is limiting requests. Try again $wait.",
+            retryAfterSeconds = seconds
+        )
     }
 
     /**

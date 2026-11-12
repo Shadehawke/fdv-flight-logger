@@ -33,12 +33,7 @@ internal object FdvBidMapper {
         // "DAL1060" is stored as airline DAL + flight number 1060, like the SimBrief import
         val airline = dto.airline?.icao.clean()
         val callsign = dto.flight.clean()
-        val flightNumber = when {
-            callsign == null -> null
-            airline != null && callsign.startsWith(airline, ignoreCase = true) ->
-                callsign.drop(airline.length).clean()
-            else -> callsign
-        }
+        val flightNumber = flightNumberOf(callsign, airline)
 
         // The SimBrief plan is the real flight; the timetable is the fallback
         val route = simBrief?.route.clean() ?: dto.route.clean()

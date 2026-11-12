@@ -120,3 +120,68 @@ data class FdvBidPlan(
     val scheduleId: Long?,
     val charterId: Long?
 )
+
+// ---- /pireps and /pireps/{id} ----
+
+@Serializable
+internal data class PirepDto(
+    val id: Long? = null,
+    val flight: String? = null,
+    val airline: CodeNameDto? = null,
+    val departure: CodeNameDto? = null,
+    val arrival: CodeNameDto? = null,
+    val aircraft: CodeNameDto? = null,
+    val status: String? = null,
+    @SerialName("submitted_at") val submittedAt: String? = null,
+    @SerialName("duration_minutes") val durationMinutes: Int? = null,
+    @SerialName("fuel_used_lbs") val fuelUsedLbs: Double? = null,
+    val passengers: Int? = null,
+    @SerialName("landing_rate_fpm") val landingRateFpm: Int? = null,
+    @SerialName("online_percent") val onlinePercent: Int? = null,
+    val route: String? = null,
+    @SerialName("schedule_id") val scheduleId: Long? = null,
+    @SerialName("charter_id") val charterId: Long? = null,
+    // Only in /pireps/{id}
+    val log: List<PirepLogDto>? = null
+)
+
+@Serializable
+internal data class PirepLogDto(val time: String? = null, val text: String? = null)
+
+@Serializable
+internal data class PageMetaDto(
+    val page: Int? = null,
+    @SerialName("last_page") val lastPage: Int? = null,
+    val total: Int? = null
+)
+
+/** One filed flight, in the units and shapes the logbook uses. */
+data class FdvPirep(
+    val id: Long,
+    val callsign: String,
+    val airline: String?,
+    val flightNumber: String?,
+    val dep: String,
+    val arr: String,
+    val aircraft: String?,
+    val status: String?,              // approved | pending | rejected
+    val submittedAtMillis: Long?,
+    val blockMinutes: Int?,           // duration_minutes: pushback to arrival
+    val airMinutes: Int?,             // from the Black Box log, so only on /pireps/{id}
+    val fuelUsedLbs: Double?,         // always pounds; null when Black Box didn't capture it
+    val pax: Int?,
+    val landingRateFpm: Int?,
+    val online: Boolean,              // FDV counts any online_percent above 0
+    val route: String?,
+    val scheduleId: Long?,            // set on flights filed from 2026-11-11 on
+    val charterId: Long?
+)
+
+data class FdvPirepPage(
+    val pireps: List<FdvPirep>,
+    val page: Int,
+    val lastPage: Int,
+    val total: Int?
+) {
+    val hasMore: Boolean get() = page < lastPage
+}
