@@ -72,6 +72,14 @@ class FlightLogRepository(context: Context) {
 
     suspend fun upsert(entity: FlightLogEntity): Long = dao.upsert(entity)
 
+    /** Writes a history import: actuals onto matched flights, then the new imported flights. */
+    suspend fun applyImport(updates: List<FlightLogEntity>, inserts: List<FlightLogEntity>) {
+        if (updates.isNotEmpty()) dao.upsertAll(updates)
+        if (inserts.isNotEmpty()) dao.insertAll(inserts)
+    }
+
+    suspend fun deleteImported(): Int = dao.deleteImported()
+
     suspend fun getLatestFlight(): FlightLogEntity? {
         return dao.getLatestFlight()
     }

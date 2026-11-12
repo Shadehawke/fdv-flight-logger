@@ -3,6 +3,7 @@ package com.fdv.fdvflightlogger.data.prefs
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,9 @@ class UserPrefsRepository(private val context: Context) {
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SIMBRIEF_ALIAS = stringPreferencesKey("simbrief_alias")
         val LAST_LANDED = stringPreferencesKey("last_landed")
+
+        val FDV_IMPORT_MODE = stringPreferencesKey("fdv_import_mode")
+        val FDV_LAST_PIREP_ID = longPreferencesKey("fdv_last_pirep_id")
     }
 
     val pilotProfileFlow: Flow<PilotProfile> =
@@ -51,6 +55,28 @@ class UserPrefsRepository(private val context: Context) {
 
     val lastLandedFlow: Flow<String> =
         context.dataStore.data.map { prefs -> prefs[Keys.LAST_LANDED].orEmpty() }
+
+    val fdvSyncFlow: Flow<FdvSyncState> =
+        context.dataStore.data.map { prefs ->
+            FdvSyncState(
+                // An unknown stored name (e.g. from a future version) reads as "never imported"
+                mode = prefs[Keys.FDV_IMPORT_MODE]?.let { name ->
+                    FdvImportMode.entries.firstOrNull { it.name == name }
+                },
+                lastPirepId = prefs[Keys.FDV_LAST_PIREP_ID]
+            )
+        }
+
+    /** Saves the sync state; FdvSyncState() with no arguments clears it. */
+    suspend fun saveFdvSync(state: FdvSyncState) {
+        context.dataStore.edit { prefs ->
+            if (state.mode != null) prefs[Keys.FDV_IMPORT_MODE] = state.mode.name
+            else prefs.remove(Keys.FDV_IMPORT_MODE)
+
+            if (state.lastPirepId != null) prefs[Keys.FDV_LAST_PIREP_ID] = state.lastPirepId
+            else prefs.remove(Keys.FDV_LAST_PIREP_ID)
+        }
+    }
 
     suspend fun savePilotProfile(profile: PilotProfile) {
         context.dataStore.edit { prefs ->

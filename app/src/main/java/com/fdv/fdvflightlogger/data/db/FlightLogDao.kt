@@ -34,4 +34,13 @@ interface FlightLogDao {
     // Restored rows arrive with id = 0, so Room assigns new IDs and nothing is overwritten
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertAll(entities: List<FlightLogEntity>): List<Long>
+
+    // Updates existing flights (matched PIREPs) in one call
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(entities: List<FlightLogEntity>)
+
+    // Only flights the history import created; flights the pilot logged are never touched
+    @Query("DELETE FROM flight_logs WHERE importedFromFdv = 1")
+    suspend fun deleteImported(): Int
 }
+

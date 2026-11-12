@@ -60,6 +60,12 @@ import com.fdv.fdvflightlogger.data.fdv.FdvBidPlan
 import com.fdv.fdvflightlogger.data.fdv.FdvPirep
 import com.fdv.fdvflightlogger.data.sync.PirepMatcher
 import com.fdv.fdvflightlogger.data.sync.withActuals
+import com.fdv.fdvflightlogger.data.prefs.FdvImportMode
+import com.fdv.fdvflightlogger.data.prefs.FdvSyncState
+import com.fdv.fdvflightlogger.data.sync.HistoryImport
+import com.fdv.fdvflightlogger.data.sync.ImportPlan
+import com.fdv.fdvflightlogger.data.sync.toImportedFlight
+import kotlinx.coroutines.delay
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -70,6 +76,9 @@ data class AppState(
 
 // Searching for a match stops after this many logbook pages (50 each)
 private const val MAX_PIREP_SEARCH_PAGES = 10
+
+// 5,000 flights; only a safety stop in case FDV's paging ever misbehaves
+private const val MAX_HISTORY_PAGES = 100
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -106,6 +115,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _bidLoading = MutableStateFlow(false)
     private val _pirepSyncing = MutableStateFlow(false)
+    val fdvSync: StateFlow<FdvSyncState> = repo.fdvSyncFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FdvSyncState())
+
+    // Non-null while an import or sync runs; the text is shown on the account card
+    private val _historyProgress = MutableStateFlow<String?>(null)
+    val historyProgress: StateFlow<String?> = _historyProgress.asStateFlow()
     val pirepSyncing: StateFlow<Boolean> = _pirepSyncing.asStateFlow()
     val bidLoading: StateFlow<Boolean> = _bidLoading.asStateFlow()
 
@@ -510,6 +525,121 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (!page.hasMore || (oldestOnPage != null && oldestOnPage < oldestUseful)) break
         }
         throw FdvApiException("No filed PIREP on FDV matches this flight. Has it been filed and processed yet?")
+    }
+
+    /** Reads the whole FDV logbook and works out what an import would do. Nothing is written yet. */
+    fun previewHistoryImport(onReady: (ImportPlan) -> Unit) {
+        if (_historyProgress.value != null) return
+        viewModelScope.launch {
+            _historyProgress.value = "Reading your FDV logbook…"
+            try {
+                val pireps = fdvCall { token -> fetchAllPireps(token, afterId = null) } ?: return@launch
+                val plan = withContext(Dispatchers.Default) { HistoryImport.plan(flightRepo.getAll(), pireps) }
+                onReady(plan)
+            } finally {
+                _historyProgress.value = null
+            }
+        }
+    }
+
+    /** Writes a confirmed import and remembers the mode for ongoing sync. */
+    fun applyHistoryImport(plan: ImportPlan, mode: FdvImportMode) {
+        if (_historyProgress.value != null) return
+        viewModelScope.launch {
+            _historyProgress.value = "Updating your logbook…"
+            try {
+                val (updated, added) = writeImport(plan, mode)
+                val message = when {
+                    added > 0 -> "Added $added flights from FDV and filled in $updated of yours"
+                    else -> "Filled in $updated of your flights from FDV"
+                }
+                _events.tryEmit(UiEvent.Message(message))
+            } catch (e: Exception) {
+                _events.tryEmit(UiEvent.ExportError("Import failed: ${e.message ?: "Unknown error"}"))
+            } finally {
+                _historyProgress.value = null
+            }
+        }
+    }
+
+    /** Fetches only PIREPs filed since the last import or sync, and applies them in the saved mode. */
+    fun syncNewPireps() {
+        if (_historyProgress.value != null) return
+        viewModelScope.launch {
+            val sync = fdvSync.value
+            val mode = sync.mode ?: run {
+                _events.tryEmit(UiEvent.Message("Import your FDV history first"))
+                return@launch
+            }
+            _historyProgress.value = "Checking FDV for new flights…"
+            try {
+                val pireps = fdvCall { token -> fetchAllPireps(token, afterId = sync.lastPirepId) } ?: return@launch
+                if (pireps.isEmpty()) {
+                    _events.tryEmit(UiEvent.Message("No new flights on FDV"))
+                    return@launch
+                }
+                val plan = withContext(Dispatchers.Default) { HistoryImport.plan(flightRepo.getAll(), pireps) }
+                val (updated, added) = writeImport(plan, mode)
+                _events.tryEmit(UiEvent.Message("Synced from FDV: $added added, $updated filled in"))
+            } catch (e: Exception) {
+                _events.tryEmit(UiEvent.ExportError("Sync failed: ${e.message ?: "Unknown error"}"))
+            } finally {
+                _historyProgress.value = null
+            }
+        }
+    }
+
+    /** Deletes the flights the import created and resets sync, so history could be imported again. */
+    fun removeImportedFlights() {
+        viewModelScope.launch {
+            try {
+                val removed = flightRepo.deleteImported()
+                repo.saveFdvSync(FdvSyncState())
+                _events.tryEmit(UiEvent.Message("Removed $removed imported flights"))
+            } catch (e: Exception) {
+                _events.tryEmit(UiEvent.ExportError("Couldn't remove imported flights: ${e.message ?: "Unknown error"}"))
+            }
+        }
+    }
+
+    // Returns (flights filled in, flights added)
+    private suspend fun writeImport(plan: ImportPlan, mode: FdvImportMode): Pair<Int, Int> {
+        val unit = state.value.settings.fuelUnit
+        val now = System.currentTimeMillis()
+        val updates = plan.matched.map { (flight, pirep) -> flight.withActuals(pirep, unit) }
+        val inserts = if (mode == FdvImportMode.ALL) plan.unmatched.map { it.toImportedFlight(unit, now) } else emptyList()
+
+        flightRepo.applyImport(updates, inserts)
+
+        // Never move the sync point backwards
+        val lastId = listOfNotNull(plan.highestPirepId, fdvSync.value.lastPirepId).maxOrNull()
+        repo.saveFdvSync(FdvSyncState(mode = mode, lastPirepId = lastId))
+        return updates.size to inserts.size
+    }
+
+    private suspend fun fetchAllPireps(token: String, afterId: Long?): List<FdvPirep> {
+        val all = mutableListOf<FdvPirep>()
+        for (pageNumber in 1..MAX_HISTORY_PAGES) {
+            val page = withRateLimitRetry { FdvApi.pireps(token, pageNumber, afterId) }
+            all += page.pireps
+            _historyProgress.value = "Reading your FDV logbook… page $pageNumber of ${page.lastPage}"
+            if (!page.hasMore) break
+        }
+        return all
+    }
+
+    // On HTTP 429, wait as long as FDV asks and try again (twice at most), then give up with its message
+    private suspend fun <T> withRateLimitRetry(block: suspend () -> T): T {
+        repeat(2) {
+            try {
+                return block()
+            } catch (e: FdvApiException) {
+                val wait = e.retryAfterSeconds ?: throw e
+                _historyProgress.value = "FDV asked the app to slow down; waiting $wait seconds…"
+                delay(wait * 1000L)
+            }
+        }
+        return block()
     }
 
     /**

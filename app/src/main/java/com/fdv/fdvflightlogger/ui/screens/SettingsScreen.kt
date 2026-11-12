@@ -45,6 +45,15 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.LaunchedEffect
 import com.fdv.fdvflightlogger.ui.components.FdvAccountCard
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.fdv.fdvflightlogger.data.prefs.FdvImportMode
+import com.fdv.fdvflightlogger.data.sync.ImportPlan
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +93,12 @@ fun SettingsScreen(
             val fdvSession by appViewModel.fdvSession.collectAsStateWithLifecycle()
             val fdvPilot by appViewModel.fdvPilot.collectAsStateWithLifecycle()
             val fdvRefreshing by appViewModel.fdvRefreshing.collectAsStateWithLifecycle()
+            val fdvSync by appViewModel.fdvSync.collectAsStateWithLifecycle()
+            val historyProgress by appViewModel.historyProgress.collectAsStateWithLifecycle()
+
+            // The previewed import waiting for the pilot's choice; null hides the dialog
+            var importPlan by remember { mutableStateOf<ImportPlan?>(null) }
+            val confirmRemoveImported = rememberSaveable { mutableStateOf(false) }
 
             // After an app restart the session is stored but the profile isn't; fetch it once here
             LaunchedEffect(fdvSession) {
@@ -94,10 +109,73 @@ fun SettingsScreen(
                 session = fdvSession,
                 pilot = fdvPilot,
                 refreshing = fdvRefreshing,
+                syncState = fdvSync,
+                historyProgress = historyProgress,
                 onSignIn = { appViewModel.startFdvSignIn(context) },
                 onRefresh = { appViewModel.refreshFdvProfile() },
-                onSignOut = { appViewModel.signOutOfFdv() }
+                onSignOut = { appViewModel.signOutOfFdv() },
+                onImportHistory = { appViewModel.previewHistoryImport { importPlan = it } },
+                onSyncNew = { appViewModel.syncNewPireps() },
+                onRemoveImported = { confirmRemoveImported.value = true }
             )
+
+            importPlan?.let { plan ->
+                AlertDialog(
+                    onDismissRequest = { importPlan = null },
+                    title = { Text("Import your FDV history?") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("${plan.total} PIREPs found on FDV.")
+                            Text("${plan.matched.size} match flights in your logbook and will get their actuals.")
+                            if (plan.alreadyLinked > 0) Text("${plan.alreadyLinked} are already synced.")
+                            Text("${plan.unmatched.size} have no matching flight.")
+                            Text(
+                                "Import all adds those as new flights. Only my flights leaves them out. " +
+                                        "Either way, new PIREPs follow the same choice when you sync.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            importPlan = null
+                            appViewModel.applyHistoryImport(plan, FdvImportMode.ALL)
+                        }) { Text("Import all") }
+                    },
+                    dismissButton = {
+                        Row {
+                            TextButton(onClick = { importPlan = null }) { Text("Cancel") }
+                            TextButton(onClick = {
+                                importPlan = null
+                                appViewModel.applyHistoryImport(plan, FdvImportMode.MATCH_ONLY)
+                            }) { Text("Only my flights") }
+                        }
+                    }
+                )
+            }
+
+            if (confirmRemoveImported.value) {
+                AlertDialog(
+                    onDismissRequest = { confirmRemoveImported.value = false },
+                    title = { Text("Remove imported flights?") },
+                    text = {
+                        Text(
+                            "This deletes every flight the FDV import created. Flights you logged yourself stay, " +
+                                    "including actuals synced onto them. You can import again afterwards."
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            confirmRemoveImported.value = false
+                            appViewModel.removeImportedFlights()
+                        }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { confirmRemoveImported.value = false }) { Text("Keep") }
+                    }
+                )
+            }
 
             // Local text wins once the user starts typing, so DataStore's async
             // round-trip can't overwrite characters mid-edit
