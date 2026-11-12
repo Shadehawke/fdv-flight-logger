@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -53,6 +54,12 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.SwapHoriz
 import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
 import com.fdv.fdvflightlogger.ui.nav.Routes
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fdv.fdvflightlogger.data.fdv.FdvPirep
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +73,11 @@ fun FlightDetailScreen(
     var notFound by remember { mutableStateOf(false) }
 
     val confirmDelete = rememberSaveable { mutableStateOf(false) }
+
+    val fdvSession by appViewModel.fdvSession.collectAsStateWithLifecycle()
+    val pirepSyncing by appViewModel.pirepSyncing.collectAsStateWithLifecycle()
+    // The PIREP found for this flight, waiting for the pilot to confirm; null hides the dialog
+    var pendingPirep by remember { mutableStateOf<FdvPirep?>(null) }
 
     LaunchedEffect(flightId) {
         loading = true
@@ -94,6 +106,24 @@ fun FlightDetailScreen(
                     }
                 },
                 actions = {
+                    if (fdvSession != null) {
+                        IconButton(
+                            enabled = !loading && flight != null && !pirepSyncing,
+                            onClick = {
+                                flight?.let { f -> appViewModel.findPirepFor(f) { pendingPirep = it } }
+                            }
+                        ) {
+                            if (pirepSyncing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(Icons.Filled.CloudSync, contentDescription = "Sync actuals from FDV")
+                            }
+                        }
+                    }
                     IconButton(
                         enabled = !loading && flight != null,
                         onClick = { navController.navigate(Routes.logFrom(flightId, FlightTemplate.RETURN_LEG)) }
@@ -170,6 +200,47 @@ fun FlightDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete.value = false }) { Text("Cancel") }
+            }
+        )
+    }
+    pendingPirep?.let { pirep ->
+        AlertDialog(
+            onDismissRequest = { pendingPirep = null },
+            title = { Text("Sync with this PIREP?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        "${pirep.callsign}  ${pirep.dep} → ${pirep.arr}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    pirep.submittedAtMillis?.let { millis ->
+                        Text("Filed ${formatFiled(millis)} · ${pirep.status ?: "unknown status"}")
+                    }
+                    Text(
+                        listOfNotNull(
+                            pirep.blockMinutes?.let { "Block ${it / 60}:%02d".format(it % 60) },
+                            pirep.airMinutes?.let { "Air ${it / 60}:%02d".format(it % 60) },
+                            pirep.landingRateFpm?.let { "$it fpm" },
+                            pirep.pax?.let { "$it PAX" }
+                        ).joinToString(" · ")
+                    )
+                    Text(
+                        "Block and air time, fuel used, PAX and landing rate will be replaced. " +
+                                "Your route, notes and planning fields are kept.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val f = flight
+                    pendingPirep = null
+                    if (f != null) appViewModel.applyPirep(f, pirep) { updated -> flight = updated }
+                }) { Text("Sync") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingPirep = null }) { Text("Cancel") }
             }
         )
     }
@@ -347,6 +418,12 @@ private fun formatStoredTime(digits: String?): String {
         else -> "${d.take(2)}:${d.drop(2).take(2)}"
     }
 }
+
+// Shown in the tablet's own time zone: "Oct 22, 2026 3:06 PM"
+private fun formatFiled(epochMillis: Long): String =
+    Instant.ofEpochMilli(epochMillis)
+        .atZone(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a"))
 
 /**
  * Formats stored wind digits (e.g., "29045") as XXX/XX (e.g., "290/45")

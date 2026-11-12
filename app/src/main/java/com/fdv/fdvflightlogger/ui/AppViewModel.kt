@@ -57,6 +57,9 @@ import com.fdv.fdvflightlogger.data.fdv.FdvApiException
 import com.fdv.fdvflightlogger.data.fdv.FdvPilot
 import com.fdv.fdvflightlogger.data.fdv.FdvBid
 import com.fdv.fdvflightlogger.data.fdv.FdvBidPlan
+import com.fdv.fdvflightlogger.data.fdv.FdvPirep
+import com.fdv.fdvflightlogger.data.sync.PirepMatcher
+import com.fdv.fdvflightlogger.data.sync.withActuals
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -64,6 +67,9 @@ data class AppState(
     val lastLanded: String = "",
     val isSetupComplete: Boolean = false
 )
+
+// Searching for a match stops after this many logbook pages (50 each)
+private const val MAX_PIREP_SEARCH_PAGES = 10
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -99,6 +105,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val fdvRefreshing: StateFlow<Boolean> = _fdvRefreshing.asStateFlow()
 
     private val _bidLoading = MutableStateFlow(false)
+    private val _pirepSyncing = MutableStateFlow(false)
+    val pirepSyncing: StateFlow<Boolean> = _pirepSyncing.asStateFlow()
     val bidLoading: StateFlow<Boolean> = _bidLoading.asStateFlow()
 
     val state: StateFlow<AppState> =
@@ -455,6 +463,53 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         onLoaded(bid)
         val callsign = listOfNotNull(bid.plan.airline, bid.plan.flightNumber).joinToString("")
         _events.tryEmit(UiEvent.Message("Loaded $callsign ${bid.plan.dep} → ${bid.plan.arr} from FDV"))
+    }
+
+    /** Finds this flight's PIREP and hands it to [onFound] for the pilot to confirm. Nothing is saved yet. */
+    fun findPirepFor(flight: FlightLogEntity, onFound: (FdvPirep) -> Unit) {
+        if (_pirepSyncing.value) return
+        viewModelScope.launch {
+            _pirepSyncing.value = true
+            try {
+                fdvCall { token -> findPirep(token, flight) }?.let(onFound)
+            } finally {
+                _pirepSyncing.value = false
+            }
+        }
+    }
+
+    /** Saves the confirmed PIREP's actuals onto the flight and hands back the updated row. */
+    fun applyPirep(flight: FlightLogEntity, pirep: FdvPirep, onSaved: (FlightLogEntity) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val updated = flight.withActuals(pirep, state.value.settings.fuelUnit)
+                flightRepo.upsert(updated)
+                onSaved(updated)
+                _events.tryEmit(UiEvent.Message("Synced with FDV PIREP ${pirep.callsign}"))
+            } catch (e: Exception) {
+                _events.tryEmit(UiEvent.ExportError("Sync failed: ${e.message ?: "Unknown error"}"))
+            }
+        }
+    }
+
+    private suspend fun findPirep(token: String, flight: FlightLogEntity): FdvPirep {
+        // Already linked (a re-sync): fetch that exact PIREP, no searching
+        flight.fdvPirepId?.let { return FdvApi.pirep(token, it) }
+
+        val taken = flightRepo.getAll().mapNotNullTo(HashSet()) { it.fdvPirepId }
+        val oldestUseful = flight.createdAtEpochMs - PirepMatcher.WINDOW_MS
+
+        for (pageNumber in 1..MAX_PIREP_SEARCH_PAGES) {
+            val page = FdvApi.pireps(token, pageNumber)
+            PirepMatcher.match(flight, page.pireps, taken)?.let { found ->
+                // The list has no Black Box log; the detail call adds air time
+                return FdvApi.pirep(token, found.id)
+            }
+            // Pages are newest first, so once they're older than the window, nothing further can match
+            val oldestOnPage = page.pireps.mapNotNull { it.submittedAtMillis }.minOrNull()
+            if (!page.hasMore || (oldestOnPage != null && oldestOnPage < oldestUseful)) break
+        }
+        throw FdvApiException("No filed PIREP on FDV matches this flight. Has it been filed and processed yet?")
     }
 
     /**
