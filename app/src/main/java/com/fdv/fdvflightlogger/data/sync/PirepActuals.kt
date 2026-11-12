@@ -32,7 +32,7 @@ internal fun FlightLogEntity.withActuals(pirep: FdvPirep, fuelUnit: WeightUnit):
 )
 
 // 209 → "0329", the digits TimeField stores
-private fun hhmm(minutes: Int): String = "%02d%02d".format(minutes / 60, minutes % 60)
+internal fun hhmm(minutes: Int): String = "%02d%02d".format(minutes / 60, minutes % 60)
 
 // FDV always sends pounds; store digits in the pilot's fuel unit, like every other fuel field
 private fun formatFuel(lbs: Double, unit: WeightUnit): String = when (unit) {

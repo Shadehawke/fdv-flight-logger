@@ -66,6 +66,9 @@ import com.fdv.fdvflightlogger.data.sync.HistoryImport
 import com.fdv.fdvflightlogger.data.sync.ImportPlan
 import com.fdv.fdvflightlogger.data.sync.toImportedFlight
 import kotlinx.coroutines.delay
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import com.fdv.fdvflightlogger.data.sync.AirTimeFillWorker
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -121,6 +124,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // Non-null while an import or sync runs; the text is shown on the account card
     private val _historyProgress = MutableStateFlow<String?>(null)
     val historyProgress: StateFlow<String?> = _historyProgress.asStateFlow()
+    // Non-null while the background air-time fill is queued or running; shown on the account card
+    val airTimeFill: StateFlow<String?> = WorkManager.getInstance(getApplication())
+        .getWorkInfosForUniqueWorkFlow(AirTimeFillWorker.NAME)
+        .map { infos -> infos.firstOrNull()?.let(::describeAirTimeFill) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     val pirepSyncing: StateFlow<Boolean> = _pirepSyncing.asStateFlow()
     val bidLoading: StateFlow<Boolean> = _bidLoading.asStateFlow()
 
@@ -606,6 +614,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun startAirTimeFill() = AirTimeFillWorker.enqueue(getApplication())
+
+    fun cancelAirTimeFill() = AirTimeFillWorker.cancel(getApplication())
+
+    private fun describeAirTimeFill(info: WorkInfo): String? = when (info.state) {
+        WorkInfo.State.ENQUEUED -> "Air times: waiting to continue…"
+        WorkInfo.State.RUNNING -> {
+            val done = info.progress.getInt(AirTimeFillWorker.KEY_DONE, 0)
+            val total = info.progress.getInt(AirTimeFillWorker.KEY_TOTAL, 0)
+            if (total > 0) "Filling in air times: $done of $total" else "Filling in air times…"
+        }
+        else -> null   // finished, failed or cancelled: nothing to show
+    }
+
     // Returns (flights filled in, flights added)
     private suspend fun writeImport(plan: ImportPlan, mode: FdvImportMode): Pair<Int, Int> {
         val unit = state.value.settings.fuelUnit
@@ -614,6 +636,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val inserts = if (mode == FdvImportMode.ALL) plan.unmatched.map { it.toImportedFlight(unit, now) } else emptyList()
 
         flightRepo.applyImport(updates, inserts)
+
+        // The list has no Black Box logs; fetch air times in the background
+        if (updates.isNotEmpty() || inserts.isNotEmpty()) AirTimeFillWorker.enqueue(getApplication())
 
         // Never move the sync point backwards
         val lastId = listOfNotNull(plan.highestPirepId, fdvSync.value.lastPirepId).maxOrNull()

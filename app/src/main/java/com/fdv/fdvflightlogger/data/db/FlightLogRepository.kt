@@ -105,4 +105,6 @@ class FlightLogRepository(context: Context) {
 
     // createdAtEpochMs survives edits, so it identifies a flight across installs
     private fun FlightLogEntity.dedupeKey(): String = "$createdAtEpochMs|$dep|$arr"
+
+    suspend fun flightsMissingAirTime(): List<FlightLogEntity> = dao.flightsMissingAirTime()
 }

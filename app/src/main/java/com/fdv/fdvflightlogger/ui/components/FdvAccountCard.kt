@@ -34,12 +34,15 @@ fun FdvAccountCard(
     refreshing: Boolean,
     syncState: FdvSyncState,
     historyProgress: String?,
+    airTimeFill: String?,
     onSignIn: () -> Unit,
     onRefresh: () -> Unit,
     onSignOut: () -> Unit,
     onImportHistory: () -> Unit,
     onSyncNew: () -> Unit,
     onRemoveImported: () -> Unit,
+    onFillAirTimes: () -> Unit,
+    onCancelAirTimes: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(modifier = modifier.fillMaxWidth()) {
@@ -141,6 +144,25 @@ fun FdvAccountCard(
                             TextButton(onClick = onRemoveImported) { Text("Remove imported") }
                         }
                         OutlinedButton(onClick = onSyncNew) { Text("Sync new flights") }
+                    }
+                    if (airTimeFill != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Text(
+                                airTimeFill,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = onCancelAirTimes) { Text("Stop") }
+                        }
+                    } else {
+                        TextButton(onClick = onFillAirTimes, modifier = Modifier.align(Alignment.End)) {
+                            Text("Fill in missing air times")
+                        }
                     }
                 }
             }

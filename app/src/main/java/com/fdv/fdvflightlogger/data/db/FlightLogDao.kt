@@ -42,5 +42,9 @@ interface FlightLogDao {
     // Only flights the history import created; flights the pilot logged are never touched
     @Query("DELETE FROM flight_logs WHERE importedFromFdv = 1")
     suspend fun deleteImported(): Int
+
+    // Linked to a PIREP but no air time yet: the history import's flights, mostly
+    @Query("SELECT * FROM flight_logs WHERE fdvPirepId IS NOT NULL AND (airTime IS NULL OR airTime = '') ORDER BY createdAtEpochMs DESC")
+    suspend fun flightsMissingAirTime(): List<FlightLogEntity>
 }
 

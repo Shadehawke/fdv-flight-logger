@@ -95,6 +95,7 @@ fun SettingsScreen(
             val fdvRefreshing by appViewModel.fdvRefreshing.collectAsStateWithLifecycle()
             val fdvSync by appViewModel.fdvSync.collectAsStateWithLifecycle()
             val historyProgress by appViewModel.historyProgress.collectAsStateWithLifecycle()
+            val airTimeFill by appViewModel.airTimeFill.collectAsStateWithLifecycle()
 
             // The previewed import waiting for the pilot's choice; null hides the dialog
             var importPlan by remember { mutableStateOf<ImportPlan?>(null) }
@@ -106,6 +107,7 @@ fun SettingsScreen(
             }
 
             FdvAccountCard(
+                airTimeFill = airTimeFill,
                 session = fdvSession,
                 pilot = fdvPilot,
                 refreshing = fdvRefreshing,
@@ -116,7 +118,9 @@ fun SettingsScreen(
                 onSignOut = { appViewModel.signOutOfFdv() },
                 onImportHistory = { appViewModel.previewHistoryImport { importPlan = it } },
                 onSyncNew = { appViewModel.syncNewPireps() },
-                onRemoveImported = { confirmRemoveImported.value = true }
+                onRemoveImported = { confirmRemoveImported.value = true },
+                onFillAirTimes = { appViewModel.startAirTimeFill() },
+                onCancelAirTimes = { appViewModel.cancelAirTimeFill() }
             )
 
             importPlan?.let { plan ->
