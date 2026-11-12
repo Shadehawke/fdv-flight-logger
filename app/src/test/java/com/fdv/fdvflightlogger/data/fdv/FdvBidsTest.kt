@@ -63,6 +63,9 @@ class FdvBidsTest {
 
         assertEquals("F13", bidPlan.depGate)
         assertEquals("A1", bidPlan.arrGate)
+
+        assertEquals(170187L, bidPlan.scheduleId)
+        assertNull(bidPlan.charterId)
     }
 
     @Test

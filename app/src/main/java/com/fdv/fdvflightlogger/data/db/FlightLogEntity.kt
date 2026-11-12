@@ -48,5 +48,13 @@ data class FlightLogEntity(
     val initAlt: String? = null,
     val squawk: String? = null,
 
-    val scratchpad: String? = null
+    val scratchpad: String? = null,
+
+    // ---- FDV sync (database version 6) ----
+    val landingRateFpm: Int? = null,      // negative, as FDV reports it (-349)
+    val fuelUsed: String? = null,         // digits in the pilot's fuel unit, like `fuel`
+    val fdvPirepId: Long? = null,         // set once matched to a PIREP; prevents double imports
+    val fdvScheduleId: Long? = null,      // booking IDs saved by "Start from my bid", for exact matching
+    val fdvCharterId: Long? = null,
+    val importedFromFdv: Boolean = false  // true only for flights the history import created
 )

@@ -44,5 +44,13 @@ data class FlightDraft(
     val initAlt: String? = null,
     val squawk: String? = null,
 
-    val scratchpad: String? = null
+    val scratchpad: String? = null,
+
+    // FDV sync; not shown in the form, but carried through edits so saving never wipes them
+    val landingRateFpm: Int? = null,
+    val fuelUsed: String? = null,
+    val fdvPirepId: Long? = null,
+    val fdvScheduleId: Long? = null,
+    val fdvCharterId: Long? = null,
+    val importedFromFdv: Boolean = false
 )

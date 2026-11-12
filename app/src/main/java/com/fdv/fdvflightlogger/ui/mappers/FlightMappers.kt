@@ -42,5 +42,12 @@ fun FlightLogEntity.toDraft(): FlightDraft = FlightDraft(
     info = info,
     initAlt = initAlt,
     squawk = squawk,
-    scratchpad = scratchpad
+    scratchpad = scratchpad,
+
+    landingRateFpm = landingRateFpm,
+    fuelUsed = fuelUsed,
+    fdvPirepId = fdvPirepId,
+    fdvScheduleId = fdvScheduleId,
+    fdvCharterId = fdvCharterId,
+    importedFromFdv = importedFromFdv
 )

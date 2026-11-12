@@ -84,7 +84,9 @@ internal object FdvBidMapper {
         return FdvBidPlan(
             plan = plan,
             depGate = dto.gates?.departure?.gate.clean(),
-            arrGate = dto.gates?.arrival?.gate.clean()
+            arrGate = dto.gates?.arrival?.gate.clean(),
+            scheduleId = dto.scheduleId,
+            charterId = dto.charterId
         )
     }
 

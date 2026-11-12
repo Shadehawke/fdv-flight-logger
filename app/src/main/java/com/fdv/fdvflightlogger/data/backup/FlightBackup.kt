@@ -105,6 +105,13 @@ object FlightBackup {
         putOpt("squawk", squawk)
 
         putOpt("scratchpad", scratchpad)
+
+        putOpt("landingRateFpm", landingRateFpm)
+        putOpt("fuelUsed", fuelUsed)
+        putOpt("fdvPirepId", fdvPirepId)
+        putOpt("fdvScheduleId", fdvScheduleId)
+        putOpt("fdvCharterId", fdvCharterId)
+        if (importedFromFdv) put("importedFromFdv", true)
     }
 
     private fun JSONObject.toEntityOrNull(): FlightLogEntity? {
@@ -158,11 +165,22 @@ object FlightBackup {
             initAlt = str("initAlt"),
             squawk = str("squawk"),
 
-            scratchpad = str("scratchpad")
+            scratchpad = str("scratchpad"),
+
+            landingRateFpm = long("landingRateFpm")?.toInt(),
+            fuelUsed = str("fuelUsed"),
+            fdvPirepId = long("fdvPirepId"),
+            fdvScheduleId = long("fdvScheduleId"),
+            fdvCharterId = long("fdvCharterId"),
+            importedFromFdv = optBoolean("importedFromFdv", false)
         )
     }
 
     // optString returns "" for missing keys and "null" for JSON nulls; normalize both to null
     private fun JSONObject.str(key: String): String? =
         if (!has(key) || isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
+
+    // optLong returns 0 for missing keys, which would look like a real ID; normalize to null instead
+    private fun JSONObject.long(key: String): Long? =
+        if (!has(key) || isNull(key)) null else optLong(key)
 }

@@ -44,6 +44,8 @@ data class FdvPilot(
 @Serializable
 internal data class BidDto(
     val id: Long? = null,
+    @SerialName("schedule_id") val scheduleId: Long? = null,
+    @SerialName("charter_id") val charterId: Long? = null,
     val flight: String? = null,
     val airline: CodeNameDto? = null,
     val departure: CodeNameDto? = null,
@@ -113,5 +115,8 @@ data class FdvBid(
 data class FdvBidPlan(
     val plan: SimBriefPlan,
     val depGate: String?,
-    val arrGate: String?
+    val arrGate: String?,
+    // The same IDs PIREPs carry from 2026-11-11 on, so sync can match this flight exactly
+    val scheduleId: Long?,
+    val charterId: Long?
 )

@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [FlightLogEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class FdvDatabase : RoomDatabase() {
@@ -43,6 +43,18 @@ abstract class FdvDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE flight_logs ADD COLUMN landingRateFpm INTEGER")
+                db.execSQL("ALTER TABLE flight_logs ADD COLUMN fuelUsed TEXT")
+                db.execSQL("ALTER TABLE flight_logs ADD COLUMN fdvPirepId INTEGER")
+                db.execSQL("ALTER TABLE flight_logs ADD COLUMN fdvScheduleId INTEGER")
+                db.execSQL("ALTER TABLE flight_logs ADD COLUMN fdvCharterId INTEGER")
+                // Every existing flight was logged by hand, so 0 (false) is correct for all of them
+                db.execSQL("ALTER TABLE flight_logs ADD COLUMN importedFromFdv INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): FdvDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -50,7 +62,7 @@ abstract class FdvDatabase : RoomDatabase() {
                     FdvDatabase::class.java,
                     "fdv_flight_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
 
                 INSTANCE = instance

@@ -241,6 +241,7 @@ private fun FlightDetailContent(
             ReadRow("Fuel", flight.fuel.orEmpty(), "PAX", flight.pax.orEmpty(), "Payload", flight.payload.orEmpty())
             ReadRow("B. Time", formatStoredTime(flight.blockTime), "A. Time", formatStoredTime(flight.airTime), "CI", flight.costIndex.orEmpty())
             ReadRow("R. Fuel", flight.reserveFuel.orEmpty(), "ZFW", flight.zfw.orEmpty(), "", "")
+            ReadRow("Fuel Used", flight.fuelUsed.orEmpty(), "Landing", flight.landingRateFpm?.let { "$it fpm" }.orEmpty(), "", "")
             ReadRow("Crz. Wind", formatStoredWind(flight.crzWind), "Crz. OAT", flight.crzOat.orEmpty(), "", "")
         }
 

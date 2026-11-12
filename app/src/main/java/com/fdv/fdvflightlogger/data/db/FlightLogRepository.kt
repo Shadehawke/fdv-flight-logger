@@ -50,7 +50,14 @@ class FlightLogRepository(context: Context) {
             info = draft.info,
             initAlt = draft.initAlt,
             squawk = draft.squawk,
-            scratchpad = draft.scratchpad
+            scratchpad = draft.scratchpad,
+
+            landingRateFpm = draft.landingRateFpm,
+            fuelUsed = draft.fuelUsed,
+            fdvPirepId = draft.fdvPirepId,
+            fdvScheduleId = draft.fdvScheduleId,
+            fdvCharterId = draft.fdvCharterId,
+            importedFromFdv = draft.importedFromFdv
         )
 
         upsert(entity) // <- call the repo wrapper

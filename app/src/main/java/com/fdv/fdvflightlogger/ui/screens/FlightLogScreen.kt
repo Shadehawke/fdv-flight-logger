@@ -160,7 +160,13 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             d.info ?: "",             // 32
             d.initAlt ?: "",          // 33
             d.squawk ?: "",           // 34
-            d.scratchpad ?: ""        // 35
+            d.scratchpad ?: "",       // 35
+            d.landingRateFpm?.toString() ?: "",  // 36
+            d.fuelUsed ?: "",                    // 37
+            d.fdvPirepId?.toString() ?: "",      // 38
+            d.fdvScheduleId?.toString() ?: "",   // 39
+            d.fdvCharterId?.toString() ?: "",    // 40
+            if (d.importedFromFdv) "1" else ""   // 41
         )
     },
     restore = { raw ->
@@ -209,7 +215,14 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             initAlt = s(33),
             squawk = s(34),
 
-            scratchpad = s(35)
+            scratchpad = s(35),
+
+            landingRateFpm = s(36)?.toIntOrNull(),
+            fuelUsed = s(37),
+            fdvPirepId = s(38)?.toLongOrNull(),
+            fdvScheduleId = s(39)?.toLongOrNull(),
+            fdvCharterId = s(40)?.toLongOrNull(),
+            importedFromFdv = s(41) == "1"
         )
     }
 )
@@ -265,7 +278,10 @@ fun FlightLogScreen(
     val applyBid: (FdvBidPlan) -> Unit = { bid ->
         draft = bid.plan.applyTo(draft, state.settings).copy(
             depGate = bid.depGate ?: draft.depGate,
-            arrGate = bid.arrGate ?: draft.arrGate
+            arrGate = bid.arrGate ?: draft.arrGate,
+            // Both are replaced, so switching bookings on one draft can't leave a stale ID behind
+            fdvScheduleId = bid.scheduleId,
+            fdvCharterId = bid.charterId
         )
     }
 
