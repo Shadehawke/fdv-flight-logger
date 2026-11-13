@@ -1,6 +1,5 @@
 package com.fdv.fdvflightlogger.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -106,21 +105,12 @@ fun FDVFlightLoggerTheme(
             if (systemDark) FdvDarkColorScheme else FdvLightColorScheme
         }
 
-        ThemeMode.LIGHT -> {
-            when {
-                dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-                    dynamicLightColorScheme(LocalContext.current)
-                else -> LightColorScheme
-            }
-        }
+        ThemeMode.LIGHT ->
+            // minSdk 31 (Android 12) always has dynamic color, so no version check is needed
+            if (dynamicColor) dynamicLightColorScheme(LocalContext.current) else LightColorScheme
 
-        ThemeMode.DARK -> {
-            when {
-                dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-                    dynamicDarkColorScheme(LocalContext.current)
-                else -> DarkColorScheme
-            }
-        }
+        ThemeMode.DARK ->
+            if (dynamicColor) dynamicDarkColorScheme(LocalContext.current) else DarkColorScheme
     }
 
     MaterialTheme(

@@ -39,6 +39,8 @@ import com.fdv.fdvflightlogger.ui.AppViewModel
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fdv.fdvflightlogger.ui.theme.GradientButton
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.LaunchedEffect
 
 
 @OptIn(ExperimentalMaterial3Api::class)

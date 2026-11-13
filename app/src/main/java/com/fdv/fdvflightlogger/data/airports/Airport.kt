@@ -15,6 +15,4 @@ data class Airport(
     internal val nameKey: String = name.uppercase()
     internal val cityKey: String = city.uppercase()
 
-    /** Short label for dropdown rows, e.g. "KATL · Hartsfield-Jackson Atlanta International Airport" */
-    val displayLabel: String get() = "$icao · $name"
 }

@@ -29,7 +29,8 @@ class FdvBidsTest {
 
     @Test
     fun `empty bid list is not an error`() {
-        assertEquals(emptyList<FdvBid>(), FdvApi.interpretBids(200, """{"data": []}"""))
+        val bids = FdvApi.interpretBids(200, """{"data": []}""")
+        assertTrue(bids.isEmpty())
     }
 
     @Test

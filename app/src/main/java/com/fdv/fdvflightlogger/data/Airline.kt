@@ -55,9 +55,6 @@ object Airlines {
     fun getByIcao(icao: String?): Airline? =
         icao?.let { code -> ALL.find { it.icao == code } }
 
-    fun getNameByIcao(icao: String?): String =
-        getByIcao(icao)?.name.orEmpty()
-
     /**
      * Builds the header line: "DAL1703 • A320 • Delta Air Lines".
      * Unknown codes from older saved flights still show as the raw code.
