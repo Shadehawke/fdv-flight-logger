@@ -62,6 +62,9 @@ object FlightBackup {
             )
         }
 
+        val array = root.optJSONArray("flights")
+            ?: throw InvalidBackupException("The backup contains no flights.")
+
         val flights = (0 until array.length()).mapNotNull { i ->
             array.optJSONObject(i)?.toEntityOrNull()
         }
