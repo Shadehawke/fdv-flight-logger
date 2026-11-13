@@ -2,8 +2,8 @@ package com.fdv.fdvflightlogger.data.auth
 
 import com.fdv.fdvflightlogger.data.network.AppHttp
 import io.ktor.client.request.accept
-import io.ktor.client.request.post
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType

@@ -1,59 +1,59 @@
 package com.fdv.fdvflightlogger.ui.screens
 
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.fdv.fdvflightlogger.data.prefs.FdvImportMode
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.data.prefs.ThemeMode
 import com.fdv.fdvflightlogger.data.prefs.WeightUnit
-import com.fdv.fdvflightlogger.ui.AppViewModel
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.LaunchedEffect
-import com.fdv.fdvflightlogger.ui.components.FdvAccountCard
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import com.fdv.fdvflightlogger.data.prefs.FdvImportMode
 import com.fdv.fdvflightlogger.data.sync.ImportPlan
+import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.components.FdvAccountCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -271,6 +271,44 @@ fun SettingsScreen(
                     appViewModel.updateSettings { it.copy(tempUnit = unit) }
                 }
             )
+
+            // ---- App updates: a direct child of the settings Column, below every other setting ----
+            val availableUpdate by appViewModel.availableUpdate.collectAsStateWithLifecycle()
+            val checkingUpdate by appViewModel.checkingUpdate.collectAsStateWithLifecycle()
+            val installedVersion = remember {
+                runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
+                    .getOrNull().orEmpty()
+            }
+
+            HorizontalDivider()
+            Text("App updates", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Installed: version $installedVersion",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            availableUpdate?.let { release ->
+                Text("Version ${release.version} is available", style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (checkingUpdate) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+                TextButton(
+                    onClick = { appViewModel.checkForUpdate(manual = true) },
+                    enabled = !checkingUpdate
+                ) { Text("Check for updates") }
+                availableUpdate?.let { release ->
+                    OutlinedButton(onClick = {
+                        // 6b replaces this with download and install
+                        CustomTabsIntent.Builder().build().launchUrl(context, release.pageUrl.toUri())
+                    }) { Text("Update") }
+                }
+            }
         }
     }
 }

@@ -1,74 +1,79 @@
 package com.fdv.fdvflightlogger.ui
 
 import android.app.Application
-import android.content.Context
-import android.net.Uri
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.fdv.fdvflightlogger.data.db.FlightLogEntity
-import com.fdv.fdvflightlogger.data.db.FlightLogRepository
-import com.fdv.fdvflightlogger.data.prefs.AppSettings
-import com.fdv.fdvflightlogger.data.prefs.PilotProfile
-import com.fdv.fdvflightlogger.data.prefs.UserPrefsRepository
-import com.fdv.fdvflightlogger.export.ExportCsv
-import com.fdv.fdvflightlogger.export.ExportPdf
-import com.fdv.fdvflightlogger.ui.screens.FlightDraft
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import com.fdv.fdvflightlogger.data.airports.AirportRepository
-import android.content.pm.PackageManager
-import android.os.Build
-import com.fdv.fdvflightlogger.data.backup.FlightBackup
-import kotlinx.coroutines.flow.first
-import com.fdv.fdvflightlogger.data.simbrief.SimBriefClient
-import com.fdv.fdvflightlogger.data.simbrief.SimBriefException
-import com.fdv.fdvflightlogger.data.simbrief.SimBriefParser
-import com.fdv.fdvflightlogger.data.simbrief.SimBriefPlan
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import com.fdv.fdvflightlogger.data.stats.FlightStats
-import com.fdv.fdvflightlogger.data.stats.StatsCalculator
-import kotlinx.coroutines.flow.flowOn
-import com.fdv.fdvflightlogger.data.history.LogbookHistory
-import kotlinx.coroutines.flow.map
 import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.net.toUri
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import com.fdv.fdvflightlogger.data.airports.AirportRepository
 import com.fdv.fdvflightlogger.data.auth.AuthCallback
 import com.fdv.fdvflightlogger.data.auth.FdvAuth
-import com.fdv.fdvflightlogger.data.auth.Pkce
-import com.fdv.fdvflightlogger.data.auth.PkceSession
 import com.fdv.fdvflightlogger.data.auth.FdvAuthClient
 import com.fdv.fdvflightlogger.data.auth.FdvAuthException
 import com.fdv.fdvflightlogger.data.auth.FdvSession
 import com.fdv.fdvflightlogger.data.auth.FdvSessionStore
+import com.fdv.fdvflightlogger.data.auth.Pkce
+import com.fdv.fdvflightlogger.data.auth.PkceSession
+import com.fdv.fdvflightlogger.data.backup.FlightBackup
+import com.fdv.fdvflightlogger.data.db.FlightLogEntity
+import com.fdv.fdvflightlogger.data.db.FlightLogRepository
 import com.fdv.fdvflightlogger.data.fdv.FdvApi
 import com.fdv.fdvflightlogger.data.fdv.FdvApiException
-import com.fdv.fdvflightlogger.data.fdv.FdvPilot
 import com.fdv.fdvflightlogger.data.fdv.FdvBid
 import com.fdv.fdvflightlogger.data.fdv.FdvBidPlan
+import com.fdv.fdvflightlogger.data.fdv.FdvPilot
 import com.fdv.fdvflightlogger.data.fdv.FdvPirep
-import com.fdv.fdvflightlogger.data.sync.PirepMatcher
-import com.fdv.fdvflightlogger.data.sync.withActuals
+import com.fdv.fdvflightlogger.data.history.LogbookHistory
+import com.fdv.fdvflightlogger.data.prefs.AppSettings
 import com.fdv.fdvflightlogger.data.prefs.FdvImportMode
 import com.fdv.fdvflightlogger.data.prefs.FdvSyncState
+import com.fdv.fdvflightlogger.data.prefs.PilotProfile
+import com.fdv.fdvflightlogger.data.prefs.UserPrefsRepository
+import com.fdv.fdvflightlogger.data.simbrief.SimBriefClient
+import com.fdv.fdvflightlogger.data.simbrief.SimBriefException
+import com.fdv.fdvflightlogger.data.simbrief.SimBriefParser
+import com.fdv.fdvflightlogger.data.simbrief.SimBriefPlan
+import com.fdv.fdvflightlogger.data.stats.FlightStats
+import com.fdv.fdvflightlogger.data.stats.StatsCalculator
+import com.fdv.fdvflightlogger.data.sync.AirTimeFillWorker
 import com.fdv.fdvflightlogger.data.sync.HistoryImport
 import com.fdv.fdvflightlogger.data.sync.ImportPlan
+import com.fdv.fdvflightlogger.data.sync.PirepMatcher
 import com.fdv.fdvflightlogger.data.sync.toImportedFlight
+import com.fdv.fdvflightlogger.data.sync.withActuals
+import com.fdv.fdvflightlogger.data.update.AppRelease
+import com.fdv.fdvflightlogger.data.update.AppVersion
+import com.fdv.fdvflightlogger.data.update.ReleaseChecker
+import com.fdv.fdvflightlogger.data.update.UpdateException
+import com.fdv.fdvflightlogger.export.ExportCsv
+import com.fdv.fdvflightlogger.export.ExportPdf
+import com.fdv.fdvflightlogger.ui.screens.FlightDraft
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
-import com.fdv.fdvflightlogger.data.sync.AirTimeFillWorker
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -82,6 +87,9 @@ private const val MAX_PIREP_SEARCH_PAGES = 10
 
 // 5,000 flights; only a safety stop in case FDV's paging ever misbehaves
 private const val MAX_HISTORY_PAGES = 100
+
+// GitHub allows 60 unauthenticated API calls an hour; once a day is plenty for update checks
+private const val UPDATE_CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -131,6 +139,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     val pirepSyncing: StateFlow<Boolean> = _pirepSyncing.asStateFlow()
     val bidLoading: StateFlow<Boolean> = _bidLoading.asStateFlow()
+
+    private val _availableUpdate = MutableStateFlow<AppRelease?>(null)
+    val availableUpdate: StateFlow<AppRelease?> = _availableUpdate.asStateFlow()
+
+    val dismissedUpdate: StateFlow<String> = repo.dismissedUpdateFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    private val _checkingUpdate = MutableStateFlow(false)
+    val checkingUpdate: StateFlow<Boolean> = _checkingUpdate.asStateFlow()
 
     val state: StateFlow<AppState> =
         combine(
@@ -617,6 +634,47 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun startAirTimeFill() = AirTimeFillWorker.enqueue(getApplication())
 
     fun cancelAirTimeFill() = AirTimeFillWorker.cancel(getApplication())
+
+    /**
+     * Asks GitHub for the latest release. Automatic checks run at most daily and never in debug builds
+     * (an update signed with the release key can't install over a debug build); [manual] always checks.
+     */
+    fun checkForUpdate(manual: Boolean) {
+        if (_checkingUpdate.value) return
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            if (!manual) {
+                val debuggable = (app.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                if (debuggable) return@launch
+                if (System.currentTimeMillis() - repo.lastUpdateCheck() < UPDATE_CHECK_INTERVAL_MS) return@launch
+            }
+
+            _checkingUpdate.value = true
+            try {
+                val release = ReleaseChecker.latest()
+                repo.setLastUpdateCheck(System.currentTimeMillis())
+
+                val current = appVersion(app)
+                val newer = release?.takeIf { AppVersion.isNewer(it.version, current) }
+                _availableUpdate.value = newer
+
+                if (manual) {
+                    val message = newer?.let { "Version ${it.version} is available" }
+                        ?: "You're on the latest version ($current)"
+                    _events.tryEmit(UiEvent.Message(message))
+                }
+            } catch (e: UpdateException) {
+                // Automatic checks fail quietly; only a check the pilot asked for reports a problem
+                if (manual) _events.tryEmit(UiEvent.ExportError(e.message ?: "Update check failed"))
+            } finally {
+                _checkingUpdate.value = false
+            }
+        }
+    }
+
+    fun dismissUpdate(version: String) {
+        viewModelScope.launch { repo.dismissUpdate(version) }
+    }
 
     private fun describeAirTimeFill(info: WorkInfo): String? = when (info.state) {
         WorkInfo.State.ENQUEUED -> "Air times: waiting to continue…"

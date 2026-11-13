@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,6 +39,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -80,6 +82,8 @@ import com.fdv.fdvflightlogger.data.Airlines
 import com.fdv.fdvflightlogger.data.aircraft.AircraftTypes
 import com.fdv.fdvflightlogger.data.airports.AirportRepository
 import com.fdv.fdvflightlogger.data.db.FlightType
+import com.fdv.fdvflightlogger.data.fdv.FdvBid
+import com.fdv.fdvflightlogger.data.fdv.FdvBidPlan
 import com.fdv.fdvflightlogger.data.history.LogbookHistory
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
@@ -98,10 +102,6 @@ import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
-import androidx.compose.material.icons.filled.FlightTakeoff
-import androidx.compose.material3.ListItem
-import com.fdv.fdvflightlogger.data.fdv.FdvBid
-import com.fdv.fdvflightlogger.data.fdv.FdvBidPlan
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

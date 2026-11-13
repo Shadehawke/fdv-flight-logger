@@ -1,8 +1,8 @@
 package com.fdv.fdvflightlogger.data.fdv
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerialName
 import com.fdv.fdvflightlogger.data.simbrief.SimBriefPlan
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /** GET /me, as FDV sends it. id and vatsim_cid are left out: their types aren't confirmed yet. */
 @Serializable

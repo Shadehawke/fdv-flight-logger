@@ -1,10 +1,10 @@
 package com.fdv.fdvflightlogger.export
 
-import androidx.core.graphics.toColorInt
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
+import androidx.core.graphics.toColorInt
 import com.fdv.fdvflightlogger.data.Airlines
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import java.time.Instant

@@ -9,14 +9,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
 import com.fdv.fdvflightlogger.ui.screens.FlightDetailScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightHistoryScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightLandingScreen
 import com.fdv.fdvflightlogger.ui.screens.FlightLogScreen
-import com.fdv.fdvflightlogger.ui.screens.SetupScreen
 import com.fdv.fdvflightlogger.ui.screens.SettingsScreen
+import com.fdv.fdvflightlogger.ui.screens.SetupScreen
 import com.fdv.fdvflightlogger.ui.screens.SplashScreen
-import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
 
 @Composable
 fun AppNavHost(

@@ -1,8 +1,8 @@
 package com.fdv.fdvflightlogger.ui.mappers
 
-import com.fdv.fdvflightlogger.ui.screens.FlightDraft
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightType
+import com.fdv.fdvflightlogger.ui.screens.FlightDraft
 
 fun FlightLogEntity.toDraft(): FlightDraft = FlightDraft(
     id = id,

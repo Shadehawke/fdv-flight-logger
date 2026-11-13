@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "fdv_prefs")
@@ -29,6 +30,9 @@ class UserPrefsRepository(private val context: Context) {
 
         val FDV_IMPORT_MODE = stringPreferencesKey("fdv_import_mode")
         val FDV_LAST_PIREP_ID = longPreferencesKey("fdv_last_pirep_id")
+
+        val LAST_UPDATE_CHECK = longPreferencesKey("last_update_check")
+        val DISMISSED_UPDATE = stringPreferencesKey("dismissed_update")
     }
 
     val pilotProfileFlow: Flow<PilotProfile> =
@@ -76,6 +80,22 @@ class UserPrefsRepository(private val context: Context) {
             if (state.lastPirepId != null) prefs[Keys.FDV_LAST_PIREP_ID] = state.lastPirepId
             else prefs.remove(Keys.FDV_LAST_PIREP_ID)
         }
+    }
+
+
+    suspend fun lastUpdateCheck(): Long =
+        context.dataStore.data.first()[Keys.LAST_UPDATE_CHECK] ?: 0L
+
+    suspend fun setLastUpdateCheck(epochMs: Long) {
+        context.dataStore.edit { it[Keys.LAST_UPDATE_CHECK] = epochMs }
+    }
+
+    // "Later" hides the card for that one version; a newer release shows it again
+    val dismissedUpdateFlow: Flow<String> =
+        context.dataStore.data.map { it[Keys.DISMISSED_UPDATE].orEmpty() }
+
+    suspend fun dismissUpdate(version: String) {
+        context.dataStore.edit { it[Keys.DISMISSED_UPDATE] = version }
     }
 
     suspend fun savePilotProfile(profile: PilotProfile) {
