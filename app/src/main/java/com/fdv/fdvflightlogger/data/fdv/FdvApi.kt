@@ -16,6 +16,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.io.IOException
+import java.time.OffsetDateTime
+import java.time.format.DateTimeParseException
 
 
 /**
@@ -69,6 +71,13 @@ object FdvApi {
     suspend fun pirep(token: String, id: Long): FdvPirep {
         val (status, body) = get("/pireps/$id", token)
         return interpretPirep(status, body)
+    }
+
+    /** Every award and trophy, earned or not (include=all), newest first. */
+    @Throws(FdvApiException::class)
+    suspend fun awards(token: String): List<FdvAward> {
+        val (status, body) = get("/me/awards?include=all", token)
+        return interpretAwards(status, body)
     }
 
     private suspend fun get(path: String, token: String): Pair<Int, String> = try {
@@ -168,6 +177,43 @@ object FdvApi {
             throw FdvApiException(UNREADABLE)
         }
         return FdvPirepMapper.toPirep(dto) ?: throw FdvApiException(UNREADABLE)
+    }
+
+    internal fun interpretAwards(status: Int, body: String): List<FdvAward> {
+        val list = okObject(status, body)["data"] as? JsonArray ?: throw FdvApiException(UNREADABLE)
+        val dtos = try {
+            AppHttp.json.decodeFromJsonElement(ListSerializer(AwardDto.serializer()), list)
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        return dtos.mapNotNull { dto ->
+            val id = dto.id ?: return@mapNotNull null
+            val name = dto.name?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            // An unknown future type is skipped rather than shown on the wrong shelf
+            val kind = when (dto.type) {
+                "award" -> AwardKind.AWARD
+                "trophy" -> AwardKind.TROPHY
+                else -> return@mapNotNull null
+            }
+            FdvAward(
+                kind = kind,
+                id = id,
+                name = name,
+                description = dto.description?.trim().orEmpty(),
+                category = dto.category?.trim()?.takeIf { it.isNotEmpty() },
+                requirement = dto.requirement?.trim()?.takeIf { it.isNotEmpty() },
+                imageUrl = dto.imageUrl?.trim()?.takeIf { it.isNotEmpty() },
+                earned = dto.earned,
+                earnedAtMillis = dto.earnedAt?.let(::isoMillis),
+                timesEarned = dto.timesEarned
+            )
+        }
+    }
+
+    private fun isoMillis(raw: String): Long? = try {
+        OffsetDateTime.parse(raw).toInstant().toEpochMilli()
+    } catch (e: DateTimeParseException) {
+        null
     }
 
     internal fun rateLimited(retryAfter: String?): FdvApiException {

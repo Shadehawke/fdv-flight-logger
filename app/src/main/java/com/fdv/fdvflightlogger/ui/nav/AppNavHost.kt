@@ -17,6 +17,7 @@ import com.fdv.fdvflightlogger.ui.screens.FlightLogScreen
 import com.fdv.fdvflightlogger.ui.screens.SettingsScreen
 import com.fdv.fdvflightlogger.ui.screens.SetupScreen
 import com.fdv.fdvflightlogger.ui.screens.SplashScreen
+import com.fdv.fdvflightlogger.ui.screens.TrophyCaseScreen
 
 @Composable
 fun AppNavHost(
@@ -120,6 +121,10 @@ fun AppNavHost(
                 appViewModel = appViewModel,
                 navController = navController
             )
+        }
+
+        composable(Routes.TROPHIES) {
+            TrophyCaseScreen(appViewModel = appViewModel, navController = navController)
         }
     }
 }

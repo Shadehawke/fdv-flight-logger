@@ -80,6 +80,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import com.fdv.fdvflightlogger.data.fdv.FdvAward
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -126,6 +127,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // The pilot's FDV profile from /me; fetched after sign-in and when Settings opens
     private val _fdvPilot = MutableStateFlow<FdvPilot?>(null)
     val fdvPilot: StateFlow<FdvPilot?> = _fdvPilot.asStateFlow()
+
+    // The trophy case; null until first loaded
+    private val _awards = MutableStateFlow<List<FdvAward>?>(null)
+    val awards: StateFlow<List<FdvAward>?> = _awards.asStateFlow()
+
+    private val _awardsLoading = MutableStateFlow(false)
+    val awardsLoading: StateFlow<Boolean> = _awardsLoading.asStateFlow()
 
     // The pilot's photo, or null for initials
     private val _avatar = MutableStateFlow<Bitmap?>(null)
@@ -458,6 +466,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             // Clear locally first, so signing out works even with no connection
             sessionStore.clear()
             _fdvPilot.value = null
+            _awards.value = null
             session?.let { FdvAuthClient.logout(it.token) }
             _events.tryEmit(UiEvent.Message("Signed out of FDV"))
         }
@@ -495,6 +504,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _events.tryEmit(UiEvent.ExportError(e.message ?: "Couldn't load your FDV profile"))
             } finally {
                 _fdvRefreshing.value = false
+            }
+        }
+    }
+
+    fun loadAwards() {
+        if (_awardsLoading.value) return
+        viewModelScope.launch {
+            _awardsLoading.value = true
+            try {
+                fdvCall { token -> FdvApi.awards(token) }?.let { _awards.value = it }
+            } finally {
+                _awardsLoading.value = false
             }
         }
     }

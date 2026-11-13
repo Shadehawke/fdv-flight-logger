@@ -10,6 +10,7 @@ object Routes {
     const val SPLASH = "splash"
     const val LANDING = "landing"
     const val LOG_FROM = "log/from/{id}/{template}"
+    const val TROPHIES = "trophies"
 
     fun logFrom(id: Long, template: FlightTemplate) = "log/from/$id/${template.name}"
 

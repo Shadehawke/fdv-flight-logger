@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -112,6 +113,11 @@ fun FlightLandingScreen(
                     actionIconContentColor = Color.White
                 ),
                 actions = {
+                    if (fdvPilot != null) {
+                        IconButton(onClick = { navController.navigate(Routes.TROPHIES) }) {
+                            Icon(Icons.Filled.EmojiEvents, contentDescription = "Trophy case")
+                        }
+                    }
                     IconButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }

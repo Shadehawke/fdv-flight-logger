@@ -167,6 +167,38 @@ data class FdvBidPlan(
     val charterId: Long?
 )
 
+// ---- /me/awards ----
+
+@Serializable
+internal data class AwardDto(
+    val type: String? = null,                 // "award" or "trophy"
+    val id: Long? = null,
+    val name: String? = null,
+    val description: String? = null,
+    val category: String? = null,             // awards: tour, landing…; trophies: rarity
+    val requirement: String? = null,
+    @SerialName("image_url") val imageUrl: String? = null,
+    val earned: Boolean = false,
+    @SerialName("earned_at") val earnedAt: String? = null,
+    @SerialName("times_earned") val timesEarned: Int = 0
+)
+
+enum class AwardKind { AWARD, TROPHY }
+
+/** One award or trophy, earned or still locked. */
+data class FdvAward(
+    val kind: AwardKind,
+    val id: Long,
+    val name: String,
+    val description: String,
+    val category: String?,
+    val requirement: String?,
+    val imageUrl: String?,          // awards only; trophies have no artwork on FDV's side
+    val earned: Boolean,
+    val earnedAtMillis: Long?,      // most recent, for trophies earned more than once
+    val timesEarned: Int
+)
+
 // ---- /pireps and /pireps/{id} ----
 
 @Serializable
