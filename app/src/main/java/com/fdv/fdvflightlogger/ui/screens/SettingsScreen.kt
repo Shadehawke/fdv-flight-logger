@@ -54,6 +54,9 @@ import com.fdv.fdvflightlogger.data.prefs.WeightUnit
 import com.fdv.fdvflightlogger.data.sync.ImportPlan
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.components.FdvAccountCard
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +99,12 @@ fun SettingsScreen(
             val fdvSync by appViewModel.fdvSync.collectAsStateWithLifecycle()
             val historyProgress by appViewModel.historyProgress.collectAsStateWithLifecycle()
             val airTimeFill by appViewModel.airTimeFill.collectAsStateWithLifecycle()
+            val avatar by appViewModel.avatar.collectAsStateWithLifecycle()
+
+            // Android's photo picker: no storage permission, and the app only ever sees the one photo picked
+            val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+                uri?.let(appViewModel::setAvatar)
+            }
 
             // The previewed import waiting for the pilot's choice; null hides the dialog
             var importPlan by remember { mutableStateOf<ImportPlan?>(null) }
@@ -120,7 +129,12 @@ fun SettingsScreen(
                 onSyncNew = { appViewModel.syncNewPireps() },
                 onRemoveImported = { confirmRemoveImported.value = true },
                 onFillAirTimes = { appViewModel.startAirTimeFill() },
-                onCancelAirTimes = { appViewModel.cancelAirTimeFill() }
+                onCancelAirTimes = { appViewModel.cancelAirTimeFill() },
+                avatar = avatar,
+                onChoosePhoto = {
+                    pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onRemovePhoto = { appViewModel.removeAvatar() }
             )
 
             importPlan?.let { plan ->

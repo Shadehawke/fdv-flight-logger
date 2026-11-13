@@ -77,6 +77,10 @@ import kotlinx.coroutines.withContext
 import com.fdv.fdvflightlogger.data.update.UpdateDownloader
 import com.fdv.fdvflightlogger.data.update.UpdateInstaller
 import com.fdv.fdvflightlogger.data.update.UpdateStatus
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import com.fdv.fdvflightlogger.data.profile.AvatarStore
+import java.io.IOException
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -123,6 +127,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // The pilot's FDV profile from /me; fetched after sign-in and when Settings opens
     private val _fdvPilot = MutableStateFlow<FdvPilot?>(null)
     val fdvPilot: StateFlow<FdvPilot?> = _fdvPilot.asStateFlow()
+
+    // The pilot's photo, or null for initials
+    private val _avatar = MutableStateFlow<Bitmap?>(null)
+    val avatar: StateFlow<Bitmap?> = _avatar.asStateFlow()
 
     private val _fdvRefreshing = MutableStateFlow(false)
     val fdvRefreshing: StateFlow<Boolean> = _fdvRefreshing.asStateFlow()
@@ -216,6 +224,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             UpdateStatus.failures.collect { message -> _events.tryEmit(UiEvent.ExportError(message)) }
         }
+        viewModelScope.launch { _avatar.value = AvatarStore.load(getApplication()) }
     }
 
     fun saveFlight(draft: FlightDraft) {
@@ -313,7 +322,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val flights = flightRepo.getAll()
-                val json = FlightBackup.toJson(flights, appVersion(context))
+                val json = FlightBackup.toJson(flights, appVersion(context), AvatarStore.jpegBytes(context))
 
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri)?.use { out ->
@@ -337,8 +346,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     } ?: error("Unable to open file")
                 }
 
-                val flights = withContext(Dispatchers.Default) { FlightBackup.fromJson(json) }
+                val contents = withContext(Dispatchers.Default) { FlightBackup.fromJson(json) }
+                val flights = contents.flights
                 val result = flightRepo.restore(flights)
+
+                // Like flights, a restore only fills gaps: an existing photo is never replaced
+                if (_avatar.value == null) {
+                    contents.avatarJpeg?.let { jpeg ->
+                        AvatarStore.restore(context, jpeg)?.let { _avatar.value = it }
+                    }
+                }
 
                 // Fresh install: seed "Last landed" from the most recent restored flight
                 if (result.added > 0 && repo.lastLandedFlow.first().isBlank()) {
@@ -717,6 +734,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissInstallPermission() {
         _needsInstallPermission.value = false
+    }
+
+    fun setAvatar(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                _avatar.value = AvatarStore.saveFrom(getApplication(), uri)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                // Includes ImageDecoder.DecodeException: not an image, or a format the device can't read
+                _events.tryEmit(UiEvent.ExportError("Couldn't use that photo. Try a different one."))
+            } catch (e: SecurityException) {
+                _events.tryEmit(UiEvent.ExportError("Couldn't open that photo."))
+            }
+        }
+    }
+
+    fun removeAvatar() {
+        viewModelScope.launch {
+            AvatarStore.delete(getApplication())
+            _avatar.value = null
+        }
     }
 
     private fun describeAirTimeFill(info: WorkInfo): String? = when (info.state) {

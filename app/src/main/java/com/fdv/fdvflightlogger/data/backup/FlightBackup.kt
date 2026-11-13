@@ -5,6 +5,7 @@ import com.fdv.fdvflightlogger.data.db.FlightType
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.util.Base64
 
 /**
  * Full-fidelity logbook backup as JSON.
@@ -19,18 +20,24 @@ object FlightBackup {
 
     class InvalidBackupException(message: String) : Exception(message)
 
-    fun toJson(flights: List<FlightLogEntity>, appVersion: String): String {
+    /** What a backup holds. [avatarJpeg] is null for backups made before 1.2.2 or without a photo. */
+    class Contents(val flights: List<FlightLogEntity>, val avatarJpeg: ByteArray?)
+
+    fun toJson(flights: List<FlightLogEntity>, appVersion: String, avatarJpeg: ByteArray? = null): String {
         val array = JSONArray()
         flights.forEach { array.put(it.toJsonObject()) }
 
-        return JSONObject()
+        val root = JSONObject()
             .put("format", FORMAT_ID)
             .put("formatVersion", FORMAT_VERSION)
             .put("appVersion", appVersion)
             .put("exportedAtEpochMs", System.currentTimeMillis())
             .put("flightCount", flights.size)
             .put("flights", array)
-            .toString(2)
+
+        // Optional, so older app versions simply ignore it
+        avatarJpeg?.let { root.put("avatarJpeg", Base64.getEncoder().encodeToString(it)) }
+        return root.toString(2)
     }
 
     /**
@@ -38,7 +45,7 @@ object FlightBackup {
      * the original IDs from another install would collide with existing rows.
      */
     @Throws(InvalidBackupException::class)
-    fun fromJson(json: String): List<FlightLogEntity> {
+    fun fromJson(json: String): Contents {
         val root = try {
             JSONObject(json)
         } catch (e: JSONException) {
@@ -55,12 +62,19 @@ object FlightBackup {
             )
         }
 
-        val array = root.optJSONArray("flights")
-            ?: throw InvalidBackupException("The backup contains no flights.")
-
-        return (0 until array.length()).mapNotNull { i ->
+        val flights = (0 until array.length()).mapNotNull { i ->
             array.optJSONObject(i)?.toEntityOrNull()
         }
+
+        // A damaged photo shouldn't block restoring the flights, so it just becomes null
+        val avatar = root.optString("avatarJpeg").takeIf { it.isNotEmpty() }?.let {
+            try {
+                Base64.getDecoder().decode(it)
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+        }
+        return Contents(flights, avatar)
     }
 
     private fun FlightLogEntity.toJsonObject(): JSONObject = JSONObject().apply {

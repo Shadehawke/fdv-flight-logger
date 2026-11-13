@@ -79,6 +79,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.LinearProgressIndicator
+import android.graphics.Bitmap
+import com.fdv.fdvflightlogger.ui.components.PilotAvatar
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -89,6 +91,7 @@ fun FlightLandingScreen(
     navController: NavController
 ) {
     val fdvPilot by appViewModel.fdvPilot.collectAsStateWithLifecycle()
+    val avatar by appViewModel.avatar.collectAsStateWithLifecycle()
     val availableUpdate by appViewModel.availableUpdate.collectAsStateWithLifecycle()
     val updateDownload by appViewModel.updateDownload.collectAsStateWithLifecycle()
     val dismissedUpdate by appViewModel.dismissedUpdate.collectAsStateWithLifecycle()
@@ -145,7 +148,7 @@ fun FlightLandingScreen(
                 )
 
                 fdvPilot?.let { pilot ->
-                    FdvPilotCard(pilot = pilot, onClick = { navController.navigate(Routes.SETTINGS) })
+                    FdvPilotCard(pilot = pilot, avatar = avatar, onClick = { navController.navigate(Routes.SETTINGS) })
                 }
 
                 availableUpdate?.takeIf { it.version != dismissedUpdate }?.let { release ->
@@ -255,7 +258,7 @@ private fun Greeting(name: String, hub: String, lastLanded: String) {
 }
 
 @Composable
-private fun FdvPilotCard(pilot: FdvPilot, onClick: () -> Unit) {
+private fun FdvPilotCard(pilot: FdvPilot, avatar: Bitmap?, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -267,6 +270,8 @@ private fun FdvPilotCard(pilot: FdvPilot, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        PilotAvatar(photo = avatar, name = pilot.name, callsign = pilot.callsign, size = 48.dp)
+
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp)

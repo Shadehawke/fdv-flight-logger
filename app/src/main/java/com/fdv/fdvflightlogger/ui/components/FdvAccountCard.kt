@@ -46,6 +46,14 @@ import com.fdv.fdvflightlogger.ui.theme.GradientButton
 import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
+import android.graphics.Bitmap
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 /**
  * FDV sign-in state and logbook sync for Settings. Stateless: it shows what it's given and
@@ -59,6 +67,7 @@ fun FdvAccountCard(
     syncState: FdvSyncState,
     historyProgress: String?,
     airTimeFill: String?,
+    avatar: Bitmap?,
     onSignIn: () -> Unit,
     onRefresh: () -> Unit,
     onSignOut: () -> Unit,
@@ -67,6 +76,8 @@ fun FdvAccountCard(
     onRemoveImported: () -> Unit,
     onFillAirTimes: () -> Unit,
     onCancelAirTimes: () -> Unit,
+    onChoosePhoto: () -> Unit,
+    onRemovePhoto: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val cs = MaterialTheme.colorScheme
@@ -88,13 +99,13 @@ fun FdvAccountCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            GlowDisc {
-                Text(
-                    text = initialsOf(pilot?.name, pilot?.callsign ?: session.callsign),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
-                )
-            }
+            EditableAvatar(
+                photo = avatar,
+                name = pilot?.name,
+                callsign = pilot?.callsign ?: session.callsign,
+                onChoosePhoto = onChoosePhoto,
+                onRemovePhoto = onRemovePhoto
+            )
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -170,6 +181,60 @@ fun FdvAccountCard(
         // Out of the way of the everyday buttons, and red because it ends the session
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onSignOut) { Text("Sign out", color = cs.error) }
+        }
+    }
+}
+
+/** The avatar with a small camera badge; tapping it offers to choose, change or remove the photo. */
+@Composable
+private fun EditableAvatar(
+    photo: Bitmap?,
+    name: String?,
+    callsign: String?,
+    onChoosePhoto: () -> Unit,
+    onRemovePhoto: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    // UI-only state (is the menu open?), so it lives here rather than in the ViewModel
+    var menuOpen by remember { mutableStateOf(false) }
+
+    Box {
+        PilotAvatar(photo = photo, name = name, callsign = callsign, onClick = { menuOpen = true })
+
+        // The badge says "tap me"; it sits on the ring's edge, outside the clipped circle
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(cs.surface),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.PhotoCamera,
+                contentDescription = null,
+                tint = cs.primary,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(if (photo == null) "Choose photo" else "Change photo") },
+                onClick = {
+                    menuOpen = false
+                    onChoosePhoto()
+                }
+            )
+            if (photo != null) {
+                DropdownMenuItem(
+                    text = { Text("Remove photo") },
+                    onClick = {
+                        menuOpen = false
+                        onRemovePhoto()
+                    }
+                )
+            }
         }
     }
 }
@@ -314,25 +379,6 @@ private fun RankChip(rank: String) {
     }
 }
 
-/** A glowing gradient disc with a glossy top, matching GradientButton and the update badge. */
-@Composable
-private fun GlowDisc(content: @Composable () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .shadow(14.dp, CircleShape, ambientColor = cs.primary, spotColor = cs.primary)
-            .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(cs.primary, cs.secondary)))
-            .drawBehind {
-                drawRect(Brush.verticalGradient(0f to Color.White.copy(alpha = 0.30f), 0.5f to Color.Transparent))
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        content()
-    }
-}
-
 /** Secondary action: a small raised pill, the same style as the dashboard's "Open saved flight". */
 @Composable
 private fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -347,15 +393,4 @@ private fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = M
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge)
     }
-}
-
-// "Shawn Spitaleri" → "SS"; falls back to the callsign's letters ("DAL1703" → "DA")
-private fun initialsOf(name: String?, callsign: String?): String {
-    val fromName = name.orEmpty()
-        .split(" ")
-        .filter { it.isNotBlank() }
-        .take(2)
-        .joinToString("") { it.first().uppercase() }
-    if (fromName.isNotEmpty()) return fromName
-    return callsign.orEmpty().filter { it.isLetter() }.take(2).uppercase().ifEmpty { "FD" }
 }
