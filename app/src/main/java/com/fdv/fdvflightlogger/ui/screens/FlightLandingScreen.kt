@@ -78,6 +78,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.LinearProgressIndicator
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -89,6 +90,7 @@ fun FlightLandingScreen(
 ) {
     val fdvPilot by appViewModel.fdvPilot.collectAsStateWithLifecycle()
     val availableUpdate by appViewModel.availableUpdate.collectAsStateWithLifecycle()
+    val updateDownload by appViewModel.updateDownload.collectAsStateWithLifecycle()
     val dismissedUpdate by appViewModel.dismissedUpdate.collectAsStateWithLifecycle()
     var showReleaseNotes by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -149,11 +151,10 @@ fun FlightLandingScreen(
                 availableUpdate?.takeIf { it.version != dismissedUpdate }?.let { release ->
                     UpdateCard(
                         release = release,
-                        // Buttons beside the text on tablets, on their own row on narrow screens
                         stacked = stackUpdateCard,
+                        downloadPercent = updateDownload,
                         onWhatsNew = { showReleaseNotes = true },
-                        // 6b replaces this with download and install
-                        onUpdate = { CustomTabsIntent.Builder().build().launchUrl(context, release.pageUrl.toUri()) },
+                        onUpdate = { appViewModel.installUpdate(release) },
                         onLater = { appViewModel.dismissUpdate(release.version) }
                     )
                 }
@@ -314,11 +315,13 @@ private fun FdvPilotCard(pilot: FdvPilot, onClick: () -> Unit) {
 private fun UpdateCard(
     release: AppRelease,
     stacked: Boolean,
+    downloadPercent: Int?,
     onWhatsNew: () -> Unit,
     onUpdate: () -> Unit,
     onLater: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
+    val downloading = downloadPercent != null
 
     Column(
         modifier = Modifier
@@ -362,10 +365,31 @@ private fun UpdateCard(
                 )
             }
 
-            if (!stacked) UpdateActions(onUpdate, onLater, Modifier.width(280.dp))
+            if (!stacked && !downloading) UpdateActions(onUpdate, onLater, Modifier.width(280.dp))
         }
 
-        if (stacked) UpdateActions(onUpdate, onLater, Modifier.fillMaxWidth())
+        when {
+            downloadPercent != null -> DownloadProgress(downloadPercent)
+            stacked -> UpdateActions(onUpdate, onLater, Modifier.fillMaxWidth())
+        }
+    }
+}
+
+@Composable
+private fun DownloadProgress(percent: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LinearProgressIndicator(
+            progress = { percent / 100f },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(50))
+        )
+        Text(
+            text = if (percent < 100) "Downloading… $percent%" else "Verifying and installing…",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

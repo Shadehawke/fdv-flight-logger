@@ -20,6 +20,12 @@ import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.UiEvent
 import com.fdv.fdvflightlogger.ui.nav.AppNavHost
 import com.fdv.fdvflightlogger.ui.theme.FDVFlightLoggerTheme
+import android.provider.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
 
@@ -70,6 +76,32 @@ class MainActivity : ComponentActivity() {
                     AppNavHost(
                         appViewModel = appViewModel,
                         modifier = Modifier.padding(padding)
+                    )
+                }
+                val needsInstallPermission by appViewModel.needsInstallPermission.collectAsStateWithLifecycle()
+                if (needsInstallPermission) {
+                    AlertDialog(
+                        onDismissRequest = { appViewModel.dismissInstallPermission() },
+                        title = { Text("Allow app updates") },
+                        text = {
+                            Text(
+                                "To install updates, Android needs your OK for FDV Flight Logger to install apps. " +
+                                        "This is a one-time step: switch on \"Allow from this source\", come back, " +
+                                        "and tap Update again."
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                appViewModel.dismissInstallPermission()
+                                // Opens this app's own entry in "Install unknown apps"
+                                startActivity(
+                                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:$packageName".toUri())
+                                )
+                            }) { Text("Open settings") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { appViewModel.dismissInstallPermission() }) { Text("Not now") }
+                        }
                     )
                 }
             }

@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets the app ask Android to install its own updates; the user still confirms each one -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="true"
@@ -36,6 +38,10 @@
                     android:path="/callback" />
             </intent-filter>
         </activity>
+        <!-- Install results from PackageInstaller. Not exported: only the system and this app can reach it -->
+        <receiver
+            android:name=".data.update.InstallStatusReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

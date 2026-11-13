@@ -74,6 +74,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.fdv.fdvflightlogger.data.update.UpdateDownloader
+import com.fdv.fdvflightlogger.data.update.UpdateInstaller
+import com.fdv.fdvflightlogger.data.update.UpdateStatus
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -149,6 +152,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _checkingUpdate = MutableStateFlow(false)
     val checkingUpdate: StateFlow<Boolean> = _checkingUpdate.asStateFlow()
 
+    // Whole percent while an update downloads; null when idle
+    private val _updateDownload = MutableStateFlow<Int?>(null)
+    val updateDownload: StateFlow<Int?> = _updateDownload.asStateFlow()
+
+    // True when Android needs the pilot to allow installs from this app first
+    private val _needsInstallPermission = MutableStateFlow(false)
+    val needsInstallPermission: StateFlow<Boolean> = _needsInstallPermission.asStateFlow()
+
     val state: StateFlow<AppState> =
         combine(
             repo.pilotProfileFlow,
@@ -200,6 +211,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         // Signed in from an earlier session: load the FDV profile once, so the dashboard has it
         viewModelScope.launch {
             if (sessionStore.session.first() != null) refreshFdvProfile(quiet = true)
+        }
+        // Install failures arrive from InstallStatusReceiver, which can't reach the ViewModel directly
+        viewModelScope.launch {
+            UpdateStatus.failures.collect { message -> _events.tryEmit(UiEvent.ExportError(message)) }
         }
     }
 
@@ -674,6 +689,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissUpdate(version: String) {
         viewModelScope.launch { repo.dismissUpdate(version) }
+    }
+
+    /** Downloads, verifies and installs [release]. Android then asks the pilot to confirm. */
+    fun installUpdate(release: AppRelease) {
+        if (_updateDownload.value != null) return
+        val app = getApplication<Application>()
+
+        // Android's one-time "allow installs from this app" switch
+        if (!app.packageManager.canRequestPackageInstalls()) {
+            _needsInstallPermission.value = true
+            return
+        }
+
+        viewModelScope.launch {
+            _updateDownload.value = 0
+            try {
+                val apk = UpdateDownloader.download(app, release) { percent -> _updateDownload.value = percent }
+                withContext(Dispatchers.IO) { UpdateInstaller.install(app, apk) }
+            } catch (e: UpdateException) {
+                _events.tryEmit(UiEvent.ExportError(e.message ?: "Update failed"))
+            } finally {
+                _updateDownload.value = null
+            }
+        }
+    }
+
+    fun dismissInstallPermission() {
+        _needsInstallPermission.value = false
     }
 
     private fun describeAirTimeFill(info: WorkInfo): String? = when (info.state) {

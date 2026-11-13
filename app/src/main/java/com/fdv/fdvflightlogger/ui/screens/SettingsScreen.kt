@@ -275,6 +275,7 @@ fun SettingsScreen(
             // ---- App updates: a direct child of the settings Column, below every other setting ----
             val availableUpdate by appViewModel.availableUpdate.collectAsStateWithLifecycle()
             val checkingUpdate by appViewModel.checkingUpdate.collectAsStateWithLifecycle()
+            val updateDownload by appViewModel.updateDownload.collectAsStateWithLifecycle()
             val installedVersion = remember {
                 runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
                     .getOrNull().orEmpty()
@@ -303,10 +304,15 @@ fun SettingsScreen(
                     enabled = !checkingUpdate
                 ) { Text("Check for updates") }
                 availableUpdate?.let { release ->
-                    OutlinedButton(onClick = {
-                        // 6b replaces this with download and install
-                        CustomTabsIntent.Builder().build().launchUrl(context, release.pageUrl.toUri())
-                    }) { Text("Update") }
+                    val percent = updateDownload
+                    if (percent != null) {
+                        Text(
+                            if (percent < 100) "Downloading… $percent%" else "Installing…",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } else {
+                        OutlinedButton(onClick = { appViewModel.installUpdate(release) }) { Text("Update") }
+                    }
                 }
             }
         }

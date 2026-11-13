@@ -6,6 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class UpdateTest {
 
@@ -66,5 +67,18 @@ class UpdateTest {
             ReleaseChecker.interpret(403, """{"message": "API rate limit exceeded"}""")
         }
         assertEquals("GitHub is limiting update checks right now. Try again in a while.", e.message)
+    }
+
+    @Test
+    fun `sha256 matches the standard test vector`() {
+        // FIPS 180-2's example: SHA-256 of "abc"
+        val file = File.createTempFile("sha", ".txt").apply {
+            writeText("abc")
+            deleteOnExit()
+        }
+        assertEquals(
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            UpdateDownloader.sha256(file)
+        )
     }
 }
