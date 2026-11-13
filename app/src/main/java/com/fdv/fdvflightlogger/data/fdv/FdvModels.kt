@@ -14,14 +14,42 @@ internal data class MeDto(
     val hub: HubDto? = null,
     val hours: Double? = null,
     val flights: Int? = null,
-    val streak: StreakDto? = null
+    val streak: StreakDto? = null,
+    @SerialName("next_rank") val nextRank: NextRankDto? = null,   // null at the top rank
+    val location: LocationDto? = null,
+    @SerialName("hours_breakdown") val hoursBreakdown: HoursBreakdownDto? = null
 )
 
 @Serializable
 internal data class HubDto(val icao: String? = null, val name: String? = null)
 
 @Serializable
-internal data class RankDto(val name: String? = null)
+internal data class RankDto(
+    val name: String? = null,
+    @SerialName("hours_required") val hoursRequired: Double? = null
+)
+
+@Serializable
+internal data class NextRankDto(
+    val name: String? = null,
+    @SerialName("hours_required") val hoursRequired: Double? = null,
+    @SerialName("hours_remaining") val hoursRemaining: Double? = null
+)
+
+@Serializable
+internal data class LocationDto(
+    val icao: String? = null,
+    val name: String? = null,
+    val source: String? = null      // "last_flight", or the hub when the pilot hasn't flown yet
+)
+
+@Serializable
+internal data class HoursBreakdownDto(
+    val flown: Double? = null,
+    val bonus: Double? = null,
+    val transfer: Double? = null,
+    @SerialName("transfer_applied") val transferApplied: Double? = null   // transfer counts up to 200 h
+)
 
 @Serializable
 internal data class StreakDto(val current: Int? = null, val best: Int? = null)
@@ -36,8 +64,26 @@ data class FdvPilot(
     val hours: Double?,
     val flights: Int?,
     val streakCurrent: Int?,
-    val streakBest: Int?
-)
+    val streakBest: Int?,
+    val rankHoursRequired: Double? = null,
+    val nextRank: String? = null,                 // null at the top rank
+    val nextRankHoursRequired: Double? = null,
+    val nextRankHoursRemaining: Double? = null,
+    val lastFlightLocation: String? = null,       // ICAO where the last filed flight landed
+    val hoursFlown: Double? = null,
+    val hoursBonus: Double? = null,
+    val hoursTransfer: Double? = null             // the transfer hours that count (capped at 200)
+) {
+    /** How far from the current rank's hours to the next rank's (0–1), or null when unknown or at the top. */
+    val rankProgress: Float?
+        get() {
+            val current = hours ?: return null
+            val from = rankHoursRequired ?: return null
+            val to = nextRankHoursRequired ?: return null
+            if (to <= from) return null
+            return ((current - from) / (to - from)).toFloat().coerceIn(0f, 1f)
+        }
+}
 
 // ---- /bids and /bids/{id} ----
 

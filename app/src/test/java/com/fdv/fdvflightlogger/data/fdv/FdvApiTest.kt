@@ -10,10 +10,15 @@ import org.junit.Test
 class FdvApiTest {
 
     private val me = """
-        {"id": "42", "callsign": "DAL1234", "firstname": "Shawn", "lastname": "Pilot",
-         "rank": {"id": 12, "name": "First Officer"}, "hub": {"id": 3, "name": "Atlanta", "icao": "KATL"},
-         "hours": 123.4, "flights": 56, "streak": {"current": 3, "best": 10},
-         "vatsim_cid": 1234567, "joined_at": "2025-01-01"}
+        {"id": 1703, "callsign": "DAL1234", "firstname": "Shawn", "lastname": "Pilot",
+         "rank": {"id": 12, "name": "First Officer", "hours_required": 2900},
+         "next_rank": {"id": 13, "name": "Sky Team Executive Captain", "hours_required": 4000, "hours_remaining": 892.9},
+         "hub": {"id": 3, "name": "Atlanta", "icao": "KATL"},
+         "location": {"icao": "KATL", "name": "Atlanta Hartsfield-Jackson International Airport", "source": "last_flight"},
+         "hours": 3107.1,
+         "hours_breakdown": {"flown": 2879.6, "bonus": 116.4, "transfer": 111, "transfer_applied": 111},
+         "flights": 795, "streak": {"current": 3, "best": 10},
+         "vatsim_cid": "1234567", "joined_at": "2025-01-01T00:00:00+00:00"}
     """.trimIndent()
 
     @Test
@@ -25,8 +30,8 @@ class FdvApiTest {
         assertEquals("First Officer", pilot.rank)
         assertEquals("KATL", pilot.hubIcao)
         assertEquals("Atlanta", pilot.hubName)
-        assertEquals(123.4, pilot.hours!!, 0.0)
-        assertEquals(56, pilot.flights)
+        assertEquals(3107.1, pilot.hours!!, 0.0)
+        assertEquals(795, pilot.flights)
         assertEquals(3, pilot.streakCurrent)
         assertEquals(10, pilot.streakBest)
     }
@@ -71,5 +76,37 @@ class FdvApiTest {
     fun `missing callsign is unreadable`() {
         val e = assertThrows(FdvApiException::class.java) { FdvApi.interpretMe(200, """{"firstname": "Shawn"}""") }
         assertEquals("FlyDeltaVirtual sent a response the app couldn't read.", e.message)
+    }
+
+    @Test
+    fun `me maps rank progress, location and hours breakdown`() {
+        val pilot = FdvApi.interpretMe(200, me)
+
+        assertEquals("Sky Team Executive Captain", pilot.nextRank)
+        assertEquals(892.9, pilot.nextRankHoursRemaining!!, 0.0)
+        assertEquals(0.188f, pilot.rankProgress!!, 0.001f)     // (3107.1 - 2900) / (4000 - 2900)
+        assertEquals("KATL", pilot.lastFlightLocation)
+        assertEquals(2879.6, pilot.hoursFlown!!, 0.0)
+        assertEquals(116.4, pilot.hoursBonus!!, 0.0)
+        assertEquals(111.0, pilot.hoursTransfer!!, 0.0)
+    }
+
+    @Test
+    fun `top rank has no next rank and no progress`() {
+        val pilot = FdvApi.interpretMe(
+            200,
+            """{"callsign": "DAL1", "rank": {"name": "Chief Pilot", "hours_required": 10000}, "next_rank": null, "hours": 12000}"""
+        )
+        assertNull(pilot.nextRank)
+        assertNull(pilot.rankProgress)
+    }
+
+    @Test
+    fun `hub fallback location is not a last landing`() {
+        val pilot = FdvApi.interpretMe(
+            200,
+            """{"callsign": "DAL1", "location": {"icao": "KBOS", "source": "hub"}}"""
+        )
+        assertNull(pilot.lastFlightLocation)
     }
 }

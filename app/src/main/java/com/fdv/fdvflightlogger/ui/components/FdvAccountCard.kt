@@ -1,5 +1,6 @@
 package com.fdv.fdvflightlogger.ui.components
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,8 +20,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,11 +32,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,14 +52,6 @@ import com.fdv.fdvflightlogger.ui.theme.GradientButton
 import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
-import android.graphics.Bitmap
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 
 /**
  * FDV sign-in state and logbook sync for Settings. Stateless: it shows what it's given and
@@ -144,6 +142,7 @@ fun FdvAccountCard(
             Text("Loading your profile…", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         } else {
             pilot.rank?.let { RankChip(it) }
+            RankProgress(pilot = pilot, modifier = Modifier.fillMaxWidth())
 
             // IntrinsicSize.Min makes all three wells as tall as the tallest (only Streak has a second line)
             Row(
@@ -161,6 +160,9 @@ fun FdvAccountCard(
                     detail = pilot.streakBest?.let { "best %,d".format(it) },
                     icon = Icons.Filled.LocalFireDepartment
                 )
+            }
+            hoursBreakdown(pilot)?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
         }
 
@@ -393,4 +395,14 @@ private fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = M
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge)
     }
+}
+
+// "2,879.6 flown + 116.4 bonus + 111.0 transfer"; parts FDV didn't send are left out
+private fun hoursBreakdown(pilot: FdvPilot): String? {
+    val parts = listOfNotNull(
+        pilot.hoursFlown?.let { "%,.1f flown".format(it) },
+        pilot.hoursBonus?.takeIf { it > 0 }?.let { "%,.1f bonus".format(it) },
+        pilot.hoursTransfer?.takeIf { it > 0 }?.let { "%,.1f transfer".format(it) }
+    )
+    return if (parts.isEmpty()) null else parts.joinToString(" + ")
 }

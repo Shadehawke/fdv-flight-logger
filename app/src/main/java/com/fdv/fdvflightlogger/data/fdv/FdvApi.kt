@@ -17,6 +17,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.io.IOException
 
+
 /**
  * [signedOut] is true when FDV rejected the token, so the app should drop the stored session.
  * [retryAfterSeconds] is set on HTTP 429, so a long-running import can wait and carry on.
@@ -106,7 +107,18 @@ object FdvApi {
             hours = me.hours,
             flights = me.flights,
             streakCurrent = me.streak?.current,
-            streakBest = me.streak?.best
+            streakBest = me.streak?.best,
+            rankHoursRequired = me.rank?.hoursRequired,
+            nextRank = me.nextRank?.name?.takeIf { it.isNotBlank() },
+            nextRankHoursRequired = me.nextRank?.hoursRequired,
+            nextRankHoursRemaining = me.nextRank?.hoursRemaining,
+            // Only a real last flight counts as "last landed"; the hub fallback isn't a landing
+            lastFlightLocation = me.location
+                ?.takeIf { it.source == "last_flight" }
+                ?.icao?.takeIf { it.isNotBlank() },
+            hoursFlown = me.hoursBreakdown?.flown,
+            hoursBonus = me.hoursBreakdown?.bonus,
+            hoursTransfer = me.hoursBreakdown?.transferApplied
         )
     }
 
@@ -193,5 +205,4 @@ object FdvApi {
     } catch (e: SerializationException) {
         null
     }
-
 }

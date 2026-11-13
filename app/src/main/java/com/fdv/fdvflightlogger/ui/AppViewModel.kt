@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import androidx.browser.customtabs.CustomTabsIntent
@@ -37,6 +38,7 @@ import com.fdv.fdvflightlogger.data.prefs.FdvImportMode
 import com.fdv.fdvflightlogger.data.prefs.FdvSyncState
 import com.fdv.fdvflightlogger.data.prefs.PilotProfile
 import com.fdv.fdvflightlogger.data.prefs.UserPrefsRepository
+import com.fdv.fdvflightlogger.data.profile.AvatarStore
 import com.fdv.fdvflightlogger.data.simbrief.SimBriefClient
 import com.fdv.fdvflightlogger.data.simbrief.SimBriefException
 import com.fdv.fdvflightlogger.data.simbrief.SimBriefParser
@@ -52,7 +54,10 @@ import com.fdv.fdvflightlogger.data.sync.withActuals
 import com.fdv.fdvflightlogger.data.update.AppRelease
 import com.fdv.fdvflightlogger.data.update.AppVersion
 import com.fdv.fdvflightlogger.data.update.ReleaseChecker
+import com.fdv.fdvflightlogger.data.update.UpdateDownloader
 import com.fdv.fdvflightlogger.data.update.UpdateException
+import com.fdv.fdvflightlogger.data.update.UpdateInstaller
+import com.fdv.fdvflightlogger.data.update.UpdateStatus
 import com.fdv.fdvflightlogger.export.ExportCsv
 import com.fdv.fdvflightlogger.export.ExportPdf
 import com.fdv.fdvflightlogger.ui.screens.FlightDraft
@@ -74,12 +79,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.fdv.fdvflightlogger.data.update.UpdateDownloader
-import com.fdv.fdvflightlogger.data.update.UpdateInstaller
-import com.fdv.fdvflightlogger.data.update.UpdateStatus
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
-import com.fdv.fdvflightlogger.data.profile.AvatarStore
 import java.io.IOException
 
 data class AppState(
