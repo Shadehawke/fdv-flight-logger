@@ -10,7 +10,6 @@ import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.math.max
 
 object ExportPdf {
 
@@ -23,14 +22,15 @@ object ExportPdf {
         val hub: String
     )
 
-    // A4 page size (points-ish). Good default for a logbook export.
-    private const val PAGE_W = 595
-    private const val PAGE_H = 842
+    // A4 landscape, in PDF points: a logbook has more columns than a portrait page can hold
+    private const val PAGE_W = 842
+    private const val PAGE_H = 595
 
     private const val MARGIN = 32
     private const val HEADER_BAR_H = 56
     private const val HEADER_INFO_H = 44
     private const val ROW_H = 18
+    private const val MIN_NOTES_W = 120
 
     private val dateFmt: DateTimeFormatter =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
@@ -38,17 +38,20 @@ object ExportPdf {
 
     private data class Col(val title: String, val w: Int)
 
-    // Notes column fills remaining width (w = 0)
+    // Notes fills whatever width is left (w = 0)
     private val cols = listOf(
-        Col("Date", 92),
-        Col("Flight", 70),
-        Col("A/C", 70),
+        Col("Date", 84),
+        Col("Flight", 62),
+        Col("A/C", 46),
         Col("DEP", 40),
         Col("ARR", 40),
-        Col("Block", 52),
-        Col("Air", 46),
+        Col("Block", 44),
+        Col("Air", 40),
         Col("Fuel", 50),
-        Col("ZFW", 54),
+        Col("Used", 50),
+        Col("ZFW", 56),
+        Col("PAX", 34),
+        Col("Ldg", 44),
         Col("Notes", 0)
     )
 
@@ -61,14 +64,11 @@ object ExportPdf {
         val paintBar = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = COLOR_SHADOW_BLACK.toColorInt()
         }
-
         val paintBarText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = COLOR_IVORY_LIGHT.toColorInt()
             textSize = 14f
             isFakeBoldText = true
         }
-
-
         val paintSub = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.DKGRAY
             textSize = 11f
@@ -89,7 +89,9 @@ object ExportPdf {
 
         val usableW = PAGE_W - (MARGIN * 2)
         val fixedW = cols.filter { it.w > 0 }.sumOf { it.w }
-        val notesW = max(90, usableW - fixedW)
+        val notesW = usableW - fixedW
+        // Fails loudly during development if a column change ever pushes the table off the page
+        check(notesW >= MIN_NOTES_W) { "PDF columns are ${MIN_NOTES_W - notesW}pt too wide for the page" }
 
         // Column left X positions
         val colXs = mutableListOf<Int>()
@@ -125,7 +127,8 @@ object ExportPdf {
             while (index < end) {
                 val entity = rows[index]
                 val values = if (entity == null) {
-                    listOf("—", "—", "—", "—", "—", "—", "—", "—", "—", "No flights logged yet.")
+                    // One dash per column, then the message in Notes; follows the column list automatically
+                    List(cols.size - 1) { "—" } + "No flights logged yet."
                 } else {
                     rowValues(entity)
                 }
@@ -150,18 +153,8 @@ object ExportPdf {
         paintBarText: Paint,
         paintSub: Paint
     ) {
-        // Header bar
-        canvas.drawRect(
-            0f, 0f,
-            PAGE_W.toFloat(), HEADER_BAR_H.toFloat(),
-            paintBar
-        )
-        canvas.drawText(
-            "FDV Flight Logger — Logbook Export",
-            MARGIN.toFloat(),
-            36f,
-            paintBarText
-        )
+        canvas.drawRect(0f, 0f, PAGE_W.toFloat(), HEADER_BAR_H.toFloat(), paintBar)
+        canvas.drawText("FDV Flight Logger — Logbook Export", MARGIN.toFloat(), 36f, paintBarText)
 
         val line1 = "Pilot: ${header.pilotId} • ${header.pilotName}"
         val line2 = "Hub: ${header.hub}"
@@ -180,32 +173,25 @@ object ExportPdf {
         paintHead: Paint,
         paintGrid: Paint
     ) {
-        // Column titles
         for (i in cols.indices) {
-            val title = cols[i].title
-            canvas.drawText(title, colXs[i].toFloat() + 2f, (y + 12).toFloat(), paintHead)
+            canvas.drawText(cols[i].title, colXs[i].toFloat() + 2f, (y + 12).toFloat(), paintHead)
         }
 
         // Header underline
         canvas.drawLine(
-            MARGIN.toFloat(),
-            (y + ROW_H).toFloat(),
-            (PAGE_W - MARGIN).toFloat(),
-            (y + ROW_H).toFloat(),
+            MARGIN.toFloat(), (y + ROW_H).toFloat(),
+            (PAGE_W - MARGIN).toFloat(), (y + ROW_H).toFloat(),
             paintGrid
         )
 
-        // Vertical grid lines (full page table area)
+        // Vertical grid lines down the table area, plus the right edge
         for (i in cols.indices) {
             val x = colXs[i].toFloat()
             canvas.drawLine(x, y.toFloat(), x, (PAGE_H - MARGIN).toFloat(), paintGrid)
         }
-        // Right edge
         canvas.drawLine(
-            (PAGE_W - MARGIN).toFloat(),
-            y.toFloat(),
-            (PAGE_W - MARGIN).toFloat(),
-            (PAGE_H - MARGIN).toFloat(),
+            (PAGE_W - MARGIN).toFloat(), y.toFloat(),
+            (PAGE_W - MARGIN).toFloat(), (PAGE_H - MARGIN).toFloat(),
             paintGrid
         )
     }
@@ -228,12 +214,9 @@ object ExportPdf {
             canvas.drawText(text, x, baseline, paintCell)
         }
 
-        // Row line
         canvas.drawLine(
-            MARGIN.toFloat(),
-            (y + ROW_H).toFloat(),
-            (PAGE_W - MARGIN).toFloat(),
-            (y + ROW_H).toFloat(),
+            MARGIN.toFloat(), (y + ROW_H).toFloat(),
+            (PAGE_W - MARGIN).toFloat(), (y + ROW_H).toFloat(),
             paintGrid
         )
     }
@@ -253,32 +236,33 @@ object ExportPdf {
             val candidate = text.take(mid) + ell
             if (paint.measureText(candidate) <= maxWidth) lo = mid + 1 else hi = mid
         }
-        val cut = max(0, lo - 1)
-        return text.take(cut) + ell
+        return text.take((lo - 1).coerceAtLeast(0)) + ell
     }
 
     private fun rowValues(f: FlightLogEntity): List<String> {
         val date = dateFmt.format(Instant.ofEpochMilli(f.createdAtEpochMs))
 
-        val notes = buildString {
-            val flightInfo = Airlines.formatFlightInfo(f.airline, f.flightNumber, null)
-            if (flightInfo.isNotEmpty()) append(flightInfo)
-
-            if (isNotEmpty()) append(" | ")
-            append(f.flightType.replace("_", " "))
-            // ... scratchpad and route appends stay as they are
-        }.trim()
+        // Airline and flight, flight type, PIREP link, then the pilot's own notes; empty parts are skipped
+        val notes = listOfNotNull(
+            Airlines.formatFlightInfo(f.airline, f.flightNumber, null).takeIf { it.isNotEmpty() },
+            f.flightType.replace("_", " "),
+            f.fdvPirepId?.let { if (f.importedFromFdv) "PIREP $it (imported)" else "PIREP $it" },
+            f.scratchpad?.trim()?.takeIf { it.isNotEmpty() }?.replace("\n", " ")
+        ).joinToString(" | ")
 
         return listOf(
             date,
             f.flightNumber.orEmpty(),
             f.aircraft.orEmpty(),
-            f.dep,  // ← dep and arr are non-nullable, keep as-is
+            f.dep,
             f.arr,
             f.blockTime.orEmpty(),
             f.airTime.orEmpty(),
             f.fuel.orEmpty(),
+            f.fuelUsed.orEmpty(),
             f.zfw.orEmpty(),
+            f.pax.orEmpty(),
+            f.landingRateFpm?.toString().orEmpty(),
             notes
         )
     }

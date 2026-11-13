@@ -1,9 +1,11 @@
 package com.fdv.fdvflightlogger.export
 
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
+import java.time.Instant
 
 object ExportCsv {
 
+    // New columns are only ever added at the end, so anything reading by position keeps working
     private val headers = listOf(
         "CreatedAtEpochMs",
         "FlightNumber",
@@ -22,7 +24,11 @@ object ExportCsv {
         "ReserveFuel","ZFW",
         "CrzWind","CrzOAT",
         "ATISInfo","InitAlt","Squawk",
-        "Scratchpad"
+        "Scratchpad",
+        // Added in 1.2: FDV sync, plus a readable date for spreadsheets
+        "FuelUsed","LandingRateFpm",
+        "FdvPirepId","ImportedFromFdv",
+        "DateUtc"
     )
 
     fun buildCsv(rows: List<FlightLogEntity>): String {
@@ -48,7 +54,11 @@ object ExportCsv {
                 f.reserveFuel, f.zfw,
                 f.crzWind, f.crzOat,
                 f.info, f.initAlt, f.squawk,
-                f.scratchpad
+                f.scratchpad,
+                f.fuelUsed, f.landingRateFpm?.toString(),
+                f.fdvPirepId?.toString(), f.importedFromFdv.toString(),
+                // ISO-8601 in UTC ("2026-10-22T20:06:41Z"); spreadsheets recognise it as a date
+                Instant.ofEpochMilli(f.createdAtEpochMs).toString()
             ).map(::csvEscape)
 
             sb.append(values.joinToString(",")).append("\n")

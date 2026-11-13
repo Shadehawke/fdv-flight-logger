@@ -164,6 +164,12 @@ fun FlightLandingScreen(
                     onOpenSaved = { navController.navigate(Routes.HISTORY) }
                 )
 
+                Text(
+                    text = "Your logbook",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 GaugeGrid(stats = stats, hub = state.profile.hub, gaugeSize = gaugeSize)
 
                 if (stats.totalFlights == 0) {
@@ -302,7 +308,7 @@ private fun FdvPilotCard(pilot: FdvPilot, onClick: () -> Unit) {
                     Text(text = "%,d".format(streak), style = MaterialTheme.typography.titleLarge)
                 }
                 Text(
-                    text = pilot.streakBest?.let { "streak · best %,d".format(it) } ?: "streak",
+                    text = pilot.streakBest?.let { "flight streak · best %,d".format(it) } ?: "flight streak",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

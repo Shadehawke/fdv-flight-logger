@@ -141,10 +141,10 @@ fun FdvAccountCard(
                     .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatWell("Hours", pilot.hours?.let { "%,.1f".format(it) } ?: "—", Modifier.weight(1f))
+                StatWell("FDV Hours", pilot.hours?.let { "%,.1f".format(it) } ?: "—", Modifier.weight(1f))
                 StatWell("Flights", pilot.flights?.let { "%,d".format(it) } ?: "—", Modifier.weight(1f))
                 StatWell(
-                    label = "Streak",
+                    label = "Flight Streak",
                     value = pilot.streakCurrent?.let { "%,d".format(it) } ?: "—",
                     modifier = Modifier.weight(1f),
                     detail = pilot.streakBest?.let { "best %,d".format(it) },
