@@ -279,66 +279,93 @@ private fun Greeting(name: String, hub: String, lastLanded: String) {
 
 @Composable
 private fun FdvPilotCard(pilot: FdvPilot, avatar: Bitmap?, onClick: () -> Unit) {
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .raised(raisedColors())
             // Same radius as raised()'s default, so the ripple matches the card's corners
             .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp)
     ) {
-        PilotAvatar(photo = avatar, name = pilot.name, callsign = pilot.callsign, size = 48.dp)
+        // Narrow screens (phones, a Fold's cover screen): the progress bar gets its own full-width line
+        // and the streak shrinks, so the rank isn't squeezed. Worked out here, before the Column,
+        // because maxWidth only exists in BoxWithConstraints' own scope.
+        val compact = maxWidth < 440.dp
 
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = "FlyDeltaVirtual",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = pilot.rank ?: pilot.callsign,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            val totals = listOfNotNull(
-                pilot.hours?.let { "%,.1f hrs".format(it) },
-                pilot.flights?.let { "%,d flights".format(it) }
-            ).joinToString(" • ")
-            if (totals.isNotEmpty()) {
-                Text(
-                    text = totals,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            RankProgress(pilot = pilot, modifier = Modifier.padding(top = 4.dp))
-        }
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 16.dp)
+            ) {
+                PilotAvatar(photo = avatar, name = pilot.name, callsign = pilot.callsign, size = 48.dp)
 
-        pilot.streakCurrent?.let { streak ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.LocalFireDepartment,
-                        contentDescription = null,   // the text beside it says what it is
-                        // Dimmed when the streak has lapsed, so a 0 doesn't look like a highlight
-                        tint = if (streak > 0) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "FlyDeltaVirtual",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(text = "%,d".format(streak), style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        text = pilot.rank ?: pilot.callsign,
+                        style = MaterialTheme.typography.titleMedium,
+                        // Long rank names wrap on a narrow card instead of being cut off
+                        maxLines = if (compact) 2 else 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val totals = listOfNotNull(
+                        pilot.hours?.let { "%,.1f hrs".format(it) },
+                        pilot.flights?.let { "%,d flights".format(it) }
+                    ).joinToString(" • ")
+                    if (totals.isNotEmpty()) {
+                        Text(
+                            text = totals,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (!compact) RankProgress(pilot = pilot, modifier = Modifier.padding(top = 4.dp))
                 }
-                Text(
-                    text = pilot.streakBest?.let { "flight streak · best %,d".format(it) } ?: "flight streak",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+                pilot.streakCurrent?.let { streak ->
+                    StreakBadge(streak = streak, best = pilot.streakBest, compact = compact)
+                }
             }
+
+            // Compact: the bar spans the whole card, under the avatar as well
+            if (compact) RankProgress(pilot = pilot)
+        }
+    }
+}
+
+@Composable
+private fun StreakBadge(streak: Int, best: Int?, compact: Boolean) {
+    val cs = MaterialTheme.colorScheme
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.LocalFireDepartment,
+                contentDescription = null,   // the text under it says what it is
+                // Dimmed when the streak has lapsed, so a 0 doesn't look like a highlight
+                tint = if (streak > 0) cs.primary else cs.onSurfaceVariant
+            )
+            Text(text = "%,d".format(streak), style = MaterialTheme.typography.titleLarge)
+        }
+        if (compact) {
+            // Two short lines instead of one long one, so the badge stays narrow
+            Text("streak", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            best?.let {
+                Text("best %,d".format(it), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+        } else {
+            Text(
+                text = best?.let { "flight streak · best %,d".format(it) } ?: "flight streak",
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant
+            )
         }
     }
 }
