@@ -263,3 +263,45 @@ data class FdvPirepPage(
 ) {
     val hasMore: Boolean get() = page < lastPage
 }
+
+// ---- /events ----
+
+@Serializable
+internal data class EventDto(
+    val id: Long? = null,
+    val name: String? = null,
+    val category: String? = null,                         // "Group Flight", "Fly In", …
+    val status: String? = null,                           // current|upcoming; the app works it out from the times instead
+    @SerialName("starts_at") val startsAt: String? = null,
+    @SerialName("ends_at") val endsAt: String? = null,
+    val departure: CodeNameDto? = null,                   // null for fly-ins
+    val arrival: CodeNameDto? = null,                     // can be null for fly-outs
+    val description: String? = null,                      // plain text with \r\n line breaks
+    @SerialName("image_url") val imageUrl: String? = null,
+    val url: String? = null,
+    val registered: Boolean = false,
+    @SerialName("registered_pilots") val registeredPilots: Int? = null,
+    @SerialName("max_pilots") val maxPilots: Int? = null
+)
+
+/** An FDV event. Whether it's live is worked out from the times, so it stays right while the screen is open. */
+data class FdvEvent(
+    val id: Long,
+    val name: String,
+    val category: String?,
+    val startsAtMillis: Long,
+    val endsAtMillis: Long,
+    val departureIcao: String?,
+    val departureName: String?,
+    val arrivalIcao: String?,
+    val arrivalName: String?,
+    val description: String,
+    val imageUrl: String?,
+    val url: String?,
+    val registered: Boolean,
+    val registeredPilots: Int,
+    val maxPilots: Int?
+) {
+    fun isLiveAt(now: Long): Boolean = now in startsAtMillis until endsAtMillis
+    fun hasEndedAt(now: Long): Boolean = now >= endsAtMillis
+}

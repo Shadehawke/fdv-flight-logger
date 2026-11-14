@@ -81,6 +81,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 import com.fdv.fdvflightlogger.ui.components.RankProgress
+import androidx.compose.material.icons.filled.Event
+import com.fdv.fdvflightlogger.ui.components.DashboardEventsCard
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -95,6 +97,11 @@ fun FlightLandingScreen(
     val availableUpdate by appViewModel.availableUpdate.collectAsStateWithLifecycle()
     val updateDownload by appViewModel.updateDownload.collectAsStateWithLifecycle()
     val dismissedUpdate by appViewModel.dismissedUpdate.collectAsStateWithLifecycle()
+    val fdvEvents by appViewModel.fdvEvents.collectAsStateWithLifecycle()
+    // Once the FDV profile is in (signed in), fetch events; reuses data under 10 minutes old
+    LaunchedEffect(fdvPilot != null) {
+        if (fdvPilot != null) appViewModel.loadEvents()
+    }
     var showReleaseNotes by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -114,6 +121,9 @@ fun FlightLandingScreen(
                 ),
                 actions = {
                     if (fdvPilot != null) {
+                        IconButton(onClick = { navController.navigate(Routes.EVENTS) }) {
+                            Icon(Icons.Filled.Event, contentDescription = "Events")
+                        }
                         IconButton(onClick = { navController.navigate(Routes.TROPHIES) }) {
                             Icon(Icons.Filled.EmojiEvents, contentDescription = "Trophy case")
                         }
@@ -166,6 +176,10 @@ fun FlightLandingScreen(
                         onUpdate = { appViewModel.installUpdate(release) },
                         onLater = { appViewModel.dismissUpdate(release.version) }
                     )
+                }
+
+                fdvEvents?.let { events ->
+                    DashboardEventsCard(events = events, onOpenAll = { navController.navigate(Routes.EVENTS) })
                 }
 
                 DashboardActions(

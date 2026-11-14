@@ -81,6 +81,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import com.fdv.fdvflightlogger.data.fdv.FdvAward
+import com.fdv.fdvflightlogger.data.fdv.FdvEvent
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -97,6 +98,9 @@ private const val MAX_HISTORY_PAGES = 100
 
 // GitHub allows 60 unauthenticated API calls an hour; once a day is plenty for update checks
 private const val UPDATE_CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000
+
+// Events barely change minute to minute; reuse them rather than spend the 60/min rate limit
+private const val EVENTS_MAX_AGE_MS = 10L * 60 * 1000
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -131,6 +135,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // The trophy case; null until first loaded
     private val _awards = MutableStateFlow<List<FdvAward>?>(null)
     val awards: StateFlow<List<FdvAward>?> = _awards.asStateFlow()
+
+    // FDV events; null until first loaded
+    private val _fdvEvents = MutableStateFlow<List<FdvEvent>?>(null)
+    val fdvEvents: StateFlow<List<FdvEvent>?> = _fdvEvents.asStateFlow()
+
+    private val _eventsLoading = MutableStateFlow(false)
+    val eventsLoading: StateFlow<Boolean> = _eventsLoading.asStateFlow()
+
+    private var eventsLoadedAt = 0L
 
     private val _awardsLoading = MutableStateFlow(false)
     val awardsLoading: StateFlow<Boolean> = _awardsLoading.asStateFlow()
@@ -467,6 +480,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             sessionStore.clear()
             _fdvPilot.value = null
             _awards.value = null
+            _fdvEvents.value = null
+            eventsLoadedAt = 0L
             session?.let { FdvAuthClient.logout(it.token) }
             _events.tryEmit(UiEvent.Message("Signed out of FDV"))
         }
@@ -516,6 +531,41 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 fdvCall { token -> FdvApi.awards(token) }?.let { _awards.value = it }
             } finally {
                 _awardsLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Loads FDV events. [force] is the refresh button: always fetches and reports errors.
+     * Otherwise (dashboard, opening the screen) data under 10 minutes old is reused, and a failure
+     * stays silent so the dashboard doesn't show an error on every launch.
+     */
+    fun loadEvents(force: Boolean = false) {
+        if (_eventsLoading.value) return
+        val fresh = System.currentTimeMillis() - eventsLoadedAt < EVENTS_MAX_AGE_MS
+        if (!force && fresh && _fdvEvents.value != null) return
+
+        viewModelScope.launch {
+            _eventsLoading.value = true
+            try {
+                val events = if (force) {
+                    fdvCall { token -> FdvApi.events(token) }
+                } else {
+                    val session = sessionStore.session.first()
+                        ?.takeUnless { it.isExpired(System.currentTimeMillis()) }
+                        ?: return@launch
+                    try {
+                        FdvApi.events(session.token)
+                    } catch (e: FdvApiException) {
+                        null
+                    }
+                }
+                if (events != null) {
+                    _fdvEvents.value = events
+                    eventsLoadedAt = System.currentTimeMillis()
+                }
+            } finally {
+                _eventsLoading.value = false
             }
         }
     }

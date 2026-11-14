@@ -80,6 +80,13 @@ object FdvApi {
         return interpretAwards(status, body)
     }
 
+    /** Current and upcoming events (FDV sends at most 50), soonest first. */
+    @Throws(FdvApiException::class)
+    suspend fun events(token: String): List<FdvEvent> {
+        val (status, body) = get("/events", token)
+        return interpretEvents(status, body)
+    }
+
     private suspend fun get(path: String, token: String): Pair<Int, String> = try {
         val response = AppHttp.client.get("${FdvAuth.API_BASE}$path") {
             bearerAuth(token)
@@ -208,6 +215,40 @@ object FdvApi {
                 timesEarned = dto.timesEarned
             )
         }
+    }
+
+    internal fun interpretEvents(status: Int, body: String): List<FdvEvent> {
+        val list = okObject(status, body)["data"] as? JsonArray ?: throw FdvApiException(UNREADABLE)
+        val dtos = try {
+            AppHttp.json.decodeFromJsonElement(ListSerializer(EventDto.serializer()), list)
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        return dtos.mapNotNull { dto ->
+            val id = dto.id ?: return@mapNotNull null
+            val name = dto.name?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            // Without a usable time window the app can't say when it runs, so it's skipped
+            val starts = dto.startsAt?.let(::isoMillis) ?: return@mapNotNull null
+            val ends = dto.endsAt?.let(::isoMillis)?.takeIf { it > starts } ?: return@mapNotNull null
+            FdvEvent(
+                id = id,
+                name = name,
+                category = dto.category?.trim()?.takeIf { it.isNotEmpty() },
+                startsAtMillis = starts,
+                endsAtMillis = ends,
+                departureIcao = dto.departure?.icao?.trim()?.uppercase()?.takeIf { it.isNotEmpty() },
+                departureName = dto.departure?.name?.trim()?.takeIf { it.isNotEmpty() },
+                arrivalIcao = dto.arrival?.icao?.trim()?.uppercase()?.takeIf { it.isNotEmpty() },
+                arrivalName = dto.arrival?.name?.trim()?.takeIf { it.isNotEmpty() },
+                // FDV writes Windows line breaks; Compose wants plain \n
+                description = dto.description.orEmpty().replace("\r\n", "\n").trim(),
+                imageUrl = dto.imageUrl?.trim()?.takeIf { it.isNotEmpty() },
+                url = dto.url?.trim()?.takeIf { it.isNotEmpty() },
+                registered = dto.registered,
+                registeredPilots = dto.registeredPilots ?: 0,
+                maxPilots = dto.maxPilots
+            )
+        }.sortedBy { it.startsAtMillis }
     }
 
     private fun isoMillis(raw: String): Long? = try {
