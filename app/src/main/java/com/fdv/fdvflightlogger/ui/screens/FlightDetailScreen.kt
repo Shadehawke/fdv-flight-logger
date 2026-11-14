@@ -58,6 +58,8 @@ import com.fdv.fdvflightlogger.ui.theme.raisedColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.fdv.fdvflightlogger.data.db.pirepStatus
+import com.fdv.fdvflightlogger.ui.components.PirepStatusBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -273,6 +275,20 @@ private fun FlightDetailContent(
             val info = Airlines.formatFlightInfo(flight.airline, flight.flightNumber, flight.aircraft)
             if (info.isNotEmpty()) {
                 Text(info, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            flight.fdvPirepId?.let { id ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "FDV PIREP $id",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    flight.pirepStatus?.let { PirepStatusBadge(it) }
+                }
             }
 
             flight.altn?.trim()?.takeIf { it.isNotEmpty() }?.let { icao ->

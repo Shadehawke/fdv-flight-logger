@@ -167,7 +167,8 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             d.fdvPirepId?.toString() ?: "",      // 38
             d.fdvScheduleId?.toString() ?: "",   // 39
             d.fdvCharterId?.toString() ?: "",    // 40
-            if (d.importedFromFdv) "1" else ""   // 41
+            if (d.importedFromFdv) "1" else "",   // 41
+            d.fdvStatus ?: ""                    // 42
         )
     },
     restore = { raw ->
@@ -223,7 +224,9 @@ private val FlightDraftSaver: Saver<FlightDraft, Any> = listSaver(
             fdvPirepId = s(38)?.toLongOrNull(),
             fdvScheduleId = s(39)?.toLongOrNull(),
             fdvCharterId = s(40)?.toLongOrNull(),
-            importedFromFdv = s(41) == "1"
+            importedFromFdv = s(41) == "1",
+            // getOrNull: a list saved before this field existed is one item shorter
+            fdvStatus = (v.getOrNull(42) as? String)?.takeIf { it.isNotBlank() }
         )
     }
 )

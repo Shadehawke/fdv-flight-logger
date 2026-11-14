@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -46,5 +47,14 @@ interface FlightLogDao {
     // Linked to a PIREP but no air time yet: the history import's flights, mostly
     @Query("SELECT * FROM flight_logs WHERE fdvPirepId IS NOT NULL AND (airTime IS NULL OR airTime = '') ORDER BY createdAtEpochMs DESC")
     suspend fun flightsMissingAirTime(): List<FlightLogEntity>
+
+    @Query("UPDATE flight_logs SET fdvStatus = :status WHERE id = :id")
+    suspend fun setFdvStatus(id: Long, status: String)
+
+    /** All in one transaction: one disk write instead of hundreds on the first full check. */
+    @Transaction
+    suspend fun setFdvStatuses(statuses: Map<Long, String>) {
+        statuses.forEach { (id, status) -> setFdvStatus(id, status) }
+    }
 }
 

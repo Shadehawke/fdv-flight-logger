@@ -83,6 +83,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import com.fdv.fdvflightlogger.data.fdv.GateAssignment
+import com.fdv.fdvflightlogger.data.sync.PirepStatusSync
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -102,6 +103,9 @@ private const val UPDATE_CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000
 
 // Events barely change minute to minute; reuse them rather than spend the 60/min rate limit
 private const val EVENTS_MAX_AGE_MS = 10L * 60 * 1000
+
+// Reviews happen on staff time; checking more often than this on its own would only spend the rate limit
+private const val STATUS_CHECK_INTERVAL_MS = 30L * 60 * 1000
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -145,6 +149,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val eventsLoading: StateFlow<Boolean> = _eventsLoading.asStateFlow()
 
     private var eventsLoadedAt = 0L
+    private var statusCheckedAt = 0L
+    private var statusCheckRunning = false
 
     private val _awardsLoading = MutableStateFlow(false)
     val awardsLoading: StateFlow<Boolean> = _awardsLoading.asStateFlow()
@@ -718,7 +724,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Fetches only PIREPs filed since the last import or sync, and applies them in the saved mode. */
     fun syncNewPireps() {
         if (_historyProgress.value != null) return
         viewModelScope.launch {
@@ -729,20 +734,77 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
             _historyProgress.value = "Checking FDV for new flights…"
             try {
-                val pireps = fdvCall { token -> fetchAllPireps(token, afterId = sync.lastPirepId) } ?: return@launch
-                if (pireps.isEmpty()) {
-                    _events.tryEmit(UiEvent.Message("No new flights on FDV"))
-                    return@launch
+                val result = fdvCall { token ->
+                    val pireps = fetchAllPireps(token, afterId = sync.lastPirepId)
+                    val counts = if (pireps.isEmpty()) null else {
+                        val plan = withContext(Dispatchers.Default) { HistoryImport.plan(flightRepo.getAll(), pireps) }
+                        writeImport(plan, mode)
+                    }
+                    // After the import, so flights just linked aren't fetched twice
+                    counts to refreshPirepStatuses(token, showProgress = true)
+                } ?: return@launch
+
+                val (counts, reviewed) = result
+                val parts = buildList {
+                    counts?.let { (updated, added) -> add("$added added, $updated filled in") }
+                    if (reviewed > 0) add("$reviewed review${if (reviewed == 1) "" else "s"} updated")
                 }
-                val plan = withContext(Dispatchers.Default) { HistoryImport.plan(flightRepo.getAll(), pireps) }
-                val (updated, added) = writeImport(plan, mode)
-                _events.tryEmit(UiEvent.Message("Synced from FDV: $added added, $updated filled in"))
+                _events.tryEmit(
+                    UiEvent.Message(if (parts.isEmpty()) "No new flights on FDV" else "Synced from FDV: ${parts.joinToString(", ")}")
+                )
             } catch (e: Exception) {
                 _events.tryEmit(UiEvent.ExportError("Sync failed: ${e.message ?: "Unknown error"}"))
             } finally {
                 _historyProgress.value = null
             }
         }
+    }
+
+    /** Dashboard's silent check: at most every 30 minutes, never during an import, never shows errors. */
+    fun refreshPirepStatusesQuietly() {
+        if (statusCheckRunning || _historyProgress.value != null) return
+        if (System.currentTimeMillis() - statusCheckedAt < STATUS_CHECK_INTERVAL_MS) return
+        viewModelScope.launch {
+            statusCheckRunning = true
+            try {
+                val session = sessionStore.session.first()
+                    ?.takeUnless { it.isExpired(System.currentTimeMillis()) }
+                    ?: return@launch
+                refreshPirepStatuses(session.token, showProgress = false)
+            } catch (e: FdvApiException) {
+                // Silent by design: the next dashboard visit tries again
+            } finally {
+                statusCheckRunning = false
+            }
+        }
+    }
+
+    /** Updates pending and never-checked flights with FDV's current review. Returns how many changed. */
+    private suspend fun refreshPirepStatuses(token: String, showProgress: Boolean): Int {
+        val open = PirepStatusSync.awaiting(flightRepo.getAll())
+        val oldest = open.mapNotNull { it.fdvPirepId }.minOrNull() ?: return 0
+
+        val seen = mutableListOf<FdvPirep>()
+        try {
+            for (pageNumber in 1..MAX_HISTORY_PAGES) {
+                val page = if (showProgress) {
+                    withRateLimitRetry { FdvApi.pireps(token, pageNumber) }
+                } else {
+                    FdvApi.pireps(token, pageNumber)
+                }
+                seen += page.pireps
+                if (showProgress) _historyProgress.value = "Checking FDV reviews… page $pageNumber of ${page.lastPage}"
+                if (!page.hasMore || PirepStatusSync.reachedOldest(page.pireps, oldest)) break
+            }
+        } catch (e: FdvApiException) {
+            // A silent check keeps what it read before the error; a sync the pilot started reports it
+            if (showProgress || seen.isEmpty()) throw e
+        }
+
+        val changes = PirepStatusSync.changes(open, seen)
+        if (changes.isNotEmpty()) flightRepo.setFdvStatuses(changes)
+        statusCheckedAt = System.currentTimeMillis()
+        return changes.size
     }
 
     /** Deletes the flights the import created and resets sync, so history could be imported again. */

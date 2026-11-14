@@ -57,7 +57,8 @@ class FlightLogRepository(context: Context) {
             fdvPirepId = draft.fdvPirepId,
             fdvScheduleId = draft.fdvScheduleId,
             fdvCharterId = draft.fdvCharterId,
-            importedFromFdv = draft.importedFromFdv
+            importedFromFdv = draft.importedFromFdv,
+            fdvStatus = draft.fdvStatus
         )
 
         upsert(entity) // <- call the repo wrapper
@@ -77,6 +78,8 @@ class FlightLogRepository(context: Context) {
         if (updates.isNotEmpty()) dao.upsertAll(updates)
         if (inserts.isNotEmpty()) dao.insertAll(inserts)
     }
+
+    suspend fun setFdvStatuses(statuses: Map<Long, String>) = dao.setFdvStatuses(statuses)
 
     suspend fun deleteImported(): Int = dao.deleteImported()
 

@@ -52,5 +52,6 @@ data class FlightDraft(
     val fdvPirepId: Long? = null,
     val fdvScheduleId: Long? = null,
     val fdvCharterId: Long? = null,
-    val importedFromFdv: Boolean = false
+    val importedFromFdv: Boolean = false,
+    val fdvStatus: String? = null
 )

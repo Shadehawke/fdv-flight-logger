@@ -103,7 +103,10 @@ fun FlightLandingScreen(
     val fdvEvents by appViewModel.fdvEvents.collectAsStateWithLifecycle()
     // Once the FDV profile is in (signed in), fetch events; reuses data under 10 minutes old
     LaunchedEffect(fdvPilot != null) {
-        if (fdvPilot != null) appViewModel.loadEvents()
+        if (fdvPilot != null) {
+            appViewModel.loadEvents()
+            appViewModel.refreshPirepStatusesQuietly()
+        }
     }
     var showReleaseNotes by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -200,7 +203,17 @@ fun FlightLandingScreen(
 
                 GaugeGrid(stats = stats, hub = state.profile.hub, gaugeSize = gaugeSize)
 
-                if (stats.totalFlights == 0) {
+                uncountedNote(stats)?.let { note ->
+                    Text(
+                        text = note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                if (stats.totalFlights == 0 && stats.lastFlight == null) {
                     Text(
                         text = "Log your first flight to start filling these gauges.",
                         style = MaterialTheme.typography.bodyMedium,
@@ -743,4 +756,13 @@ private fun LastFlightCard(flight: FlightLogEntity, onClick: () -> Unit) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+// "Not counted, like on FDV: 2 awaiting review · 1 rejected", or null when every flight counts
+private fun uncountedNote(stats: FlightStats): String? {
+    val parts = buildList {
+        if (stats.pendingFlights > 0) add("${stats.pendingFlights} awaiting review")
+        if (stats.rejectedFlights > 0) add("${stats.rejectedFlights} rejected")
+    }
+    return if (parts.isEmpty()) null else "Not counted, like on FDV: ${parts.joinToString(" · ")}"
 }

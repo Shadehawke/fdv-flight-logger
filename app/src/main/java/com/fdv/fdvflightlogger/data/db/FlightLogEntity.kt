@@ -56,5 +56,7 @@ data class FlightLogEntity(
     val fdvPirepId: Long? = null,         // set once matched to a PIREP; prevents double imports
     val fdvScheduleId: Long? = null,      // booking IDs saved by "Start from my bid", for exact matching
     val fdvCharterId: Long? = null,
-    val importedFromFdv: Boolean = false  // true only for flights the history import created
+    val importedFromFdv: Boolean = false,  // true only for flights the history import created
+    // ---- FDV review (database version 7) ----
+    val fdvStatus: String? = null         // approved | pending | rejected; null = not filed, or not checked yet
 )

@@ -69,6 +69,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.fdv.fdvflightlogger.data.db.PirepStatus
+import com.fdv.fdvflightlogger.data.db.pirepStatus
+import com.fdv.fdvflightlogger.ui.components.PirepStatusBadge
 
 private enum class SortMode { NEWEST_FIRST, OLDEST_FIRST }
 
@@ -336,14 +339,11 @@ private fun FlightHistoryCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "${f.dep} → ${f.arr}",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                // Approved is the normal case; only flights that need attention get a badge
+                f.pirepStatus?.takeIf { it != PirepStatus.APPROVED }?.let { PirepStatusBadge(it) }
                 Text(
                     text = formatDate(f.createdAtEpochMs),
                     style = MaterialTheme.typography.bodySmall,
@@ -405,7 +405,8 @@ private fun FlightLogEntity.matches(q: String): Boolean {
             scratchpad.m() ||
             sid.m() ||
             star.m() ||
-            altn.m()
+            altn.m() ||
+            fdvStatus.m()      // "pending" or "rejected" finds those flights
 }
 
 private fun formatDate(epochMs: Long): String =

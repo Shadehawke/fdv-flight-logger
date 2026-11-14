@@ -10,6 +10,8 @@ import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.fdv.fdvflightlogger.data.db.PirepStatus
+import com.fdv.fdvflightlogger.data.db.pirepStatus
 
 object ExportPdf {
 
@@ -246,7 +248,14 @@ object ExportPdf {
         val notes = listOfNotNull(
             Airlines.formatFlightInfo(f.airline, f.flightNumber, null).takeIf { it.isNotEmpty() },
             f.flightType.replace("_", " "),
-            f.fdvPirepId?.let { if (f.importedFromFdv) "PIREP $it (imported)" else "PIREP $it" },
+            f.fdvPirepId?.let { id ->
+                // Approved is the normal case, so only the exceptions are spelled out
+                val extras = listOfNotNull(
+                    f.pirepStatus?.takeIf { it != PirepStatus.APPROVED }?.label?.lowercase(),
+                    "imported".takeIf { f.importedFromFdv }
+                )
+                if (extras.isEmpty()) "PIREP $id" else "PIREP $id (${extras.joinToString(", ")})"
+            },
             f.scratchpad?.trim()?.takeIf { it.isNotEmpty() }?.replace("\n", " ")
         ).joinToString(" | ")
 

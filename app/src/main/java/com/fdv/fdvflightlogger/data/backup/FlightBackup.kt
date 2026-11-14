@@ -129,6 +129,7 @@ object FlightBackup {
         putOpt("fdvScheduleId", fdvScheduleId)
         putOpt("fdvCharterId", fdvCharterId)
         if (importedFromFdv) put("importedFromFdv", true)
+        putOpt("fdvStatus", fdvStatus)
     }
 
     private fun JSONObject.toEntityOrNull(): FlightLogEntity? {
@@ -189,7 +190,8 @@ object FlightBackup {
             fdvPirepId = long("fdvPirepId"),
             fdvScheduleId = long("fdvScheduleId"),
             fdvCharterId = long("fdvCharterId"),
-            importedFromFdv = optBoolean("importedFromFdv", false)
+            importedFromFdv = optBoolean("importedFromFdv", false),
+            fdvStatus = str("fdvStatus")
         )
     }
 

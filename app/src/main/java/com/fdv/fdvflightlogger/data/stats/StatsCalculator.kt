@@ -2,6 +2,9 @@ package com.fdv.fdvflightlogger.data.stats
 
 import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightType
+import com.fdv.fdvflightlogger.data.db.PirepStatus
+import com.fdv.fdvflightlogger.data.db.countsTowardStats
+import com.fdv.fdvflightlogger.data.db.pirepStatus
 
 object StatsCalculator {
 
@@ -18,33 +21,38 @@ object StatsCalculator {
         if (flights.isEmpty()) return FlightStats()
 
         val hubCode = hub.trim().uppercase()
+        // Like FDV: pending and rejected flights don't count; flights never filed are the pilot's logbook and do
+        val counted = flights.filter { it.countsTowardStats }
 
         // Look up each flight's distance once; it feeds both the total and the longest flight
-        val withDistance = flights.map { it to distanceNm(it.dep, it.arr) }
+        val withDistance = counted.map { it to distanceNm(it.dep, it.arr) }
         val longest = withDistance
             .filter { (_, nm) -> nm != null }
             .maxByOrNull { (_, nm) -> nm!! }
 
         return FlightStats(
-            totalFlights = flights.size,
-            blockMinutes = flights.sumOf { parseMinutes(it.blockTime) ?: 0 },
-            airMinutes = flights.sumOf { parseMinutes(it.airTime) ?: 0 },
+            totalFlights = counted.size,
+            blockMinutes = counted.sumOf { parseMinutes(it.blockTime) ?: 0 },
+            airMinutes = counted.sumOf { parseMinutes(it.airTime) ?: 0 },
             distanceNm = withDistance.sumOf { (_, nm) -> nm ?: 0.0 },
-            onlineFlights = flights.count { it.flightType == FlightType.ONLINE.name },
-            hubFlights = if (hubCode.isEmpty()) 0 else flights.count {
+            onlineFlights = counted.count { it.flightType == FlightType.ONLINE.name },
+            hubFlights = if (hubCode.isEmpty()) 0 else counted.count {
                 it.dep.equals(hubCode, ignoreCase = true) || it.arr.equals(hubCode, ignoreCase = true)
             },
-            airportsVisited = flights
+            airportsVisited = counted
                 .flatMap { listOf(it.dep, it.arr) }
                 .map { it.trim().uppercase() }
                 .filter { it.isNotEmpty() }
                 .toSet()
                 .size,
-            topAircraft = topN(flights.mapNotNull { it.aircraft?.trim()?.uppercase()?.takeIf { a -> a.isNotEmpty() } }),
-            topRoutes = topN(flights.map { "${it.dep.trim().uppercase()} → ${it.arr.trim().uppercase()}" }),
+            topAircraft = topN(counted.mapNotNull { it.aircraft?.trim()?.uppercase()?.takeIf { a -> a.isNotEmpty() } }),
+            topRoutes = topN(counted.map { "${it.dep.trim().uppercase()} → ${it.arr.trim().uppercase()}" }),
             longestFlight = longest?.first,
             longestFlightNm = longest?.second ?: 0.0,
-            lastFlight = flights.maxByOrNull { it.createdAtEpochMs }
+            // The most recent flight, counted or not: a just-filed flight is still your last flight
+            lastFlight = flights.maxByOrNull { it.createdAtEpochMs },
+            pendingFlights = flights.count { it.pirepStatus == PirepStatus.PENDING },
+            rejectedFlights = flights.count { it.pirepStatus == PirepStatus.REJECTED }
         )
     }
 

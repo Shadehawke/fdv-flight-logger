@@ -22,7 +22,10 @@ data class FlightStats(
     val topRoutes: List<RankedItem> = emptyList(),
     val longestFlight: FlightLogEntity? = null,
     val longestFlightNm: Double = 0.0,
-    val lastFlight: FlightLogEntity? = null
+    val lastFlight: FlightLogEntity? = null,
+    // Left out of everything above because FDV doesn't count them either
+    val pendingFlights: Int = 0,
+    val rejectedFlights: Int = 0
 ) {
     val blockHours: Double get() = blockMinutes / 60.0
 

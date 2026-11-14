@@ -28,7 +28,9 @@ object ExportCsv {
         // Added in 1.2: FDV sync, plus a readable date for spreadsheets
         "FuelUsed","LandingRateFpm",
         "FdvPirepId","ImportedFromFdv",
-        "DateUtc"
+        "DateUtc",
+        // Added in 1.3
+        "FdvStatus"
     )
 
     fun buildCsv(rows: List<FlightLogEntity>): String {
@@ -58,7 +60,8 @@ object ExportCsv {
                 f.fuelUsed, f.landingRateFpm?.toString(),
                 f.fdvPirepId?.toString(), f.importedFromFdv.toString(),
                 // ISO-8601 in UTC ("2026-10-22T20:06:41Z"); spreadsheets recognise it as a date
-                Instant.ofEpochMilli(f.createdAtEpochMs).toString()
+                Instant.ofEpochMilli(f.createdAtEpochMs).toString(),
+                f.fdvStatus
             ).map(::csvEscape)
 
             sb.append(values.joinToString(",")).append("\n")

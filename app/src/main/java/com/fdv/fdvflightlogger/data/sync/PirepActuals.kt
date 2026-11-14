@@ -27,6 +27,7 @@ internal fun FlightLogEntity.withActuals(pirep: FdvPirep, fuelUnit: WeightUnit):
     aircraft = aircraft?.takeIf { it.isNotBlank() } ?: pirep.aircraft,
 
     fdvPirepId = pirep.id,
+    fdvStatus = pirep.status?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: fdvStatus,
     fdvScheduleId = fdvScheduleId ?: pirep.scheduleId,
     fdvCharterId = fdvCharterId ?: pirep.charterId
 )

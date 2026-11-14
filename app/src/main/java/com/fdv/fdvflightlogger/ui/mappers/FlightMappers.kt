@@ -49,5 +49,6 @@ fun FlightLogEntity.toDraft(): FlightDraft = FlightDraft(
     fdvPirepId = fdvPirepId,
     fdvScheduleId = fdvScheduleId,
     fdvCharterId = fdvCharterId,
-    importedFromFdv = importedFromFdv
+    importedFromFdv = importedFromFdv,
+    fdvStatus = fdvStatus
 )
