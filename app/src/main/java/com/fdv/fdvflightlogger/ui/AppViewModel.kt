@@ -28,8 +28,10 @@ import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightLogRepository
 import com.fdv.fdvflightlogger.data.fdv.FdvApi
 import com.fdv.fdvflightlogger.data.fdv.FdvApiException
+import com.fdv.fdvflightlogger.data.fdv.FdvAward
 import com.fdv.fdvflightlogger.data.fdv.FdvBid
 import com.fdv.fdvflightlogger.data.fdv.FdvBidPlan
+import com.fdv.fdvflightlogger.data.fdv.FdvEvent
 import com.fdv.fdvflightlogger.data.fdv.FdvPilot
 import com.fdv.fdvflightlogger.data.fdv.FdvPirep
 import com.fdv.fdvflightlogger.data.history.LogbookHistory
@@ -80,8 +82,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
-import com.fdv.fdvflightlogger.data.fdv.FdvAward
-import com.fdv.fdvflightlogger.data.fdv.FdvEvent
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),

@@ -21,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +39,7 @@ import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.data.prefs.ThemeMode
 import com.fdv.fdvflightlogger.data.prefs.WeightUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.theme.GradientButton
 
 
@@ -75,7 +75,7 @@ fun SetupScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Initial Setup") }) }
+        topBar = { FdvTopBar(title = { Text("Initial Setup") }) }
     ) { padding ->
 
         val scrollState = rememberScrollState()

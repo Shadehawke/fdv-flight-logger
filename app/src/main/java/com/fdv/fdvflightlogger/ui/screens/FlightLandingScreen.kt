@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -39,8 +40,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,9 +69,11 @@ import com.fdv.fdvflightlogger.data.stats.RankedItem
 import com.fdv.fdvflightlogger.data.update.AppRelease
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.components.ArcGauge
+import com.fdv.fdvflightlogger.ui.components.DashboardEventsCard
+import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.components.PilotAvatar
+import com.fdv.fdvflightlogger.ui.components.RankProgress
 import com.fdv.fdvflightlogger.ui.nav.Routes
-import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
 import com.fdv.fdvflightlogger.ui.theme.GradientButton
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
@@ -80,9 +81,11 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
-import com.fdv.fdvflightlogger.ui.components.RankProgress
-import androidx.compose.material.icons.filled.Event
-import com.fdv.fdvflightlogger.ui.components.DashboardEventsCard
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -112,13 +115,15 @@ fun FlightLandingScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("FDV Flight Logger") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DeltaBlue,
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
-                ),
+            FdvTopBar(
+                title = {
+                    Text(
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)) { append("FDV") }
+                            withStyle(SpanStyle(fontWeight = FontWeight.Light)) { append(" Flight Logger") }
+                        }
+                    )
+                },
                 actions = {
                     if (fdvPilot != null) {
                         IconButton(onClick = { navController.navigate(Routes.EVENTS) }) {

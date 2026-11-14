@@ -29,8 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,9 +49,9 @@ import com.fdv.fdvflightlogger.data.db.FlightLogEntity
 import com.fdv.fdvflightlogger.data.db.FlightType
 import com.fdv.fdvflightlogger.data.fdv.FdvPirep
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
 import com.fdv.fdvflightlogger.ui.nav.Routes
-import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
 import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
@@ -89,14 +87,8 @@ fun FlightDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            FdvTopBar(
                 title = { Text("Flight Detail") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DeltaBlue,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    actionIconContentColor = Color.White
-                ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(

@@ -45,8 +45,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -88,11 +86,11 @@ import com.fdv.fdvflightlogger.data.history.LogbookHistory
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
 import com.fdv.fdvflightlogger.ui.mappers.applyTo
 import com.fdv.fdvflightlogger.ui.mappers.asTemplate
 import com.fdv.fdvflightlogger.ui.mappers.toDraft
-import com.fdv.fdvflightlogger.ui.theme.DeltaBlue
 import com.fdv.fdvflightlogger.ui.theme.FieldShape
 import com.fdv.fdvflightlogger.ui.theme.GradientButton
 import com.fdv.fdvflightlogger.ui.theme.SectionChip
@@ -457,14 +455,8 @@ fun FlightLogScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            FdvTopBar(
                 title = { Text("FDV Flight Logger") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DeltaBlue,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    actionIconContentColor = Color.White
-                ),
                 actions = {
                     // Only offered when signed in to FDV; the session is read from encrypted storage
                     if (fdvSession != null) {

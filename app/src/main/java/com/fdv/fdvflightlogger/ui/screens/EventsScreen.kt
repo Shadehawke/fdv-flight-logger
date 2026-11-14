@@ -35,7 +35,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,6 +55,7 @@ import androidx.navigation.NavController
 import com.fdv.fdvflightlogger.data.fdv.FdvEvent
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.components.EventBanner
+import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.components.LivePill
 import com.fdv.fdvflightlogger.ui.components.eventRoute
 import com.fdv.fdvflightlogger.ui.components.eventTiming
@@ -80,7 +80,7 @@ fun EventsScreen(appViewModel: AppViewModel, navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            FdvTopBar(
                 title = { Text("Events") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {

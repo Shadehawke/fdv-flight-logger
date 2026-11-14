@@ -43,7 +43,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,6 +76,7 @@ import coil3.request.crossfade
 import com.fdv.fdvflightlogger.data.fdv.AwardKind
 import com.fdv.fdvflightlogger.data.fdv.FdvAward
 import com.fdv.fdvflightlogger.ui.AppViewModel
+import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.theme.inset
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
@@ -111,7 +111,7 @@ fun TrophyCaseScreen(appViewModel: AppViewModel, navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            FdvTopBar(
                 title = { Text("Trophy Case") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
