@@ -82,6 +82,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import com.fdv.fdvflightlogger.data.fdv.GateAssignment
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -156,6 +157,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val fdvRefreshing: StateFlow<Boolean> = _fdvRefreshing.asStateFlow()
 
     private val _bidLoading = MutableStateFlow(false)
+    private val _gateLoading = MutableStateFlow(false)
+    val gateLoading: StateFlow<Boolean> = _gateLoading.asStateFlow()
     private val _pirepSyncing = MutableStateFlow(false)
     val fdvSync: StateFlow<FdvSyncState> = repo.fdvSyncFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FdvSyncState())
@@ -600,6 +603,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 fetchBid(id, onLoaded)
             } finally {
                 _bidLoading.value = false
+            }
+        }
+    }
+
+    /** Asks FDV for a gate at [icao] and hands the gate (e.g. "F13") to [onAssigned]. */
+    fun assignGate(icao: String, airline: String?, aircraft: String?, onAssigned: (String) -> Unit) {
+        if (_gateLoading.value) return
+        viewModelScope.launch {
+            _gateLoading.value = true
+            try {
+                when (val result = fdvCall { token -> FdvApi.assignGate(token, icao, airline, aircraft) }) {
+                    null -> Unit    // the call failed; fdvCall has already shown why
+                    GateAssignment.NoGates ->
+                        _events.tryEmit(UiEvent.Message("FDV has no gates on file for ${icao.uppercase()}"))
+                    is GateAssignment.Assigned -> {
+                        onAssigned(result.gate.gate)
+                        val where = listOfNotNull("Gate ${result.gate.gate}", result.gate.terminal).joinToString(" · ")
+                        _events.tryEmit(UiEvent.Message("$where at ${icao.uppercase()}"))
+                    }
+                }
+            } finally {
+                _gateLoading.value = false
             }
         }
     }

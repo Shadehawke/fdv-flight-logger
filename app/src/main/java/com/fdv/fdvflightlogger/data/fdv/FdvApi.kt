@@ -87,6 +87,13 @@ object FdvApi {
         return interpretEvents(status, body)
     }
 
+    /** A gate at [icao] chosen the way FDV does for bookings. Random on each call: ask once per flight. */
+    @Throws(FdvApiException::class)
+    suspend fun assignGate(token: String, icao: String, airline: String?, aircraft: String?): GateAssignment {
+        val (status, body) = get(gateAssignPath(icao, airline, aircraft), token)
+        return interpretGateAssign(status, body)
+    }
+
     private suspend fun get(path: String, token: String): Pair<Int, String> = try {
         val response = AppHttp.client.get("${FdvAuth.API_BASE}$path") {
             bearerAuth(token)
@@ -250,6 +257,38 @@ object FdvApi {
             )
         }.sortedBy { it.startsAtMillis }
     }
+
+    /**
+     * FDV wants an airline ICAO code and an aircraft ICAO type. A typed airline name falls back to
+     * Delta, and an aircraft that isn't a type code is left out, so neither turns into a 422.
+     */
+    internal fun gateAssignPath(icao: String, airline: String?, aircraft: String?): String {
+        val carrier = airline?.trim()?.uppercase()?.takeIf { AIRLINE_CODE.matches(it) } ?: "DAL"
+        val type = aircraft?.trim()?.uppercase()?.takeIf { AIRCRAFT_CODE.matches(it) }
+        return buildString {
+            append("/airports/").append(icao.trim().uppercase()).append("/gates/assign")
+            append("?airline=").append(carrier)
+            if (type != null) append("&aircraft=").append(type)
+        }
+    }
+
+    internal fun interpretGateAssign(status: Int, body: String): GateAssignment {
+        // An airport FDV doesn't know has no gates to give: that's an answer, not an error
+        if (status == 404) return GateAssignment.NoGates
+        val root = okObject(status, body)
+        // "gate": null (no gates on file) isn't a JsonObject, so it lands here too
+        val gateJson = root["gate"] as? JsonObject ?: return GateAssignment.NoGates
+        val dto = try {
+            AppHttp.json.decodeFromJsonElement(GateDto.serializer(), gateJson)
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        val gate = dto.gate?.trim()?.uppercase()?.takeIf { it.isNotEmpty() } ?: return GateAssignment.NoGates
+        return GateAssignment.Assigned(FdvGate(terminal = dto.terminal?.trim()?.takeIf { it.isNotEmpty() }, gate = gate))
+    }
+
+    private val AIRLINE_CODE = Regex("[A-Z]{3}")
+    private val AIRCRAFT_CODE = Regex("[A-Z0-9]{2,4}")
 
     private fun isoMillis(raw: String): Long? = try {
         OffsetDateTime.parse(raw).toInstant().toEpochMilli()

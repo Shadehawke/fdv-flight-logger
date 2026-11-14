@@ -100,6 +100,9 @@ import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.filled.MeetingRoom
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -268,6 +271,7 @@ fun FlightLogScreen(
 
     val fdvSession by appViewModel.fdvSession.collectAsStateWithLifecycle()
     val bidLoading by appViewModel.bidLoading.collectAsStateWithLifecycle()
+    val gateLoading by appViewModel.gateLoading.collectAsStateWithLifecycle()
     val confirmBid = rememberSaveable { mutableStateOf(false) }
     // Plain remember: FdvBid isn't saveable, and after a rotation the pilot can simply tap again
     var bidChoices by remember { mutableStateOf<List<FdvBid>>(emptyList()) }
@@ -286,6 +290,22 @@ fun FlightLogScreen(
     val startFromBid = {
         appViewModel.startFromBid(onChoose = { bidChoices = it }, onLoaded = applyBid)
     }
+
+    val gateAssist = GateAssist(
+        // Signed in, and not a flight that's already been filed (its gates are history)
+        available = fdvSession != null && draft.fdvPirepId == null,
+        loading = gateLoading,
+        onAssign = { side ->
+            val icao = if (side == GateSide.DEPARTURE) draft.dep else draft.arr
+            appViewModel.assignGate(icao, draft.airline, draft.aircraft) { gate ->
+                // Re-checked on arrival: if the pilot typed a gate while FDV was answering, theirs wins
+                draft = when (side) {
+                    GateSide.DEPARTURE -> if (draft.depGate.isNullOrBlank()) draft.copy(depGate = gate) else draft
+                    GateSide.ARRIVAL -> if (draft.arrGate.isNullOrBlank()) draft.copy(arrGate = gate) else draft
+                }
+            }
+        }
+    )
 
     val isDirty = draft.normalizedForDirtyCheck() != initialDraft.normalizedForDirtyCheck()
 
@@ -570,7 +590,8 @@ fun FlightLogScreen(
                     qnhUnit = state.settings.qnhUnit,
                     tempUnit = state.settings.tempUnit,
                     activeSection = activeSection,
-                    history = logbookHistory
+                    history = logbookHistory,
+                    gates = gateAssist
                 )
 
                 WindowWidthSizeClass.Medium -> MediumTwoColumnLayout(
@@ -579,7 +600,8 @@ fun FlightLogScreen(
                     qnhUnit = state.settings.qnhUnit,
                     tempUnit = state.settings.tempUnit,
                     activeSection = activeSection,
-                    history = logbookHistory
+                    history = logbookHistory,
+                    gates = gateAssist
                 )
 
                 else -> CompactSingleColumnLayout(
@@ -588,7 +610,8 @@ fun FlightLogScreen(
                     qnhUnit = state.settings.qnhUnit,
                     tempUnit = state.settings.tempUnit,
                     activeSection = activeSection,
-                    history = logbookHistory
+                    history = logbookHistory,
+                    gates = gateAssist
                 )
             }
         }
@@ -604,7 +627,8 @@ private fun CompactSingleColumnLayout(
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
     activeSection: FlightSection,
-    history: LogbookHistory
+    history: LogbookHistory,
+    gates: GateAssist
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -620,7 +644,7 @@ private fun CompactSingleColumnLayout(
         ) {
             RouteHeader(draft, onDraftChange)
 
-            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history)
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history, gates)
 
             Spacer(Modifier.height(8.dp))
         }
@@ -636,7 +660,8 @@ private fun MediumTwoColumnLayout(
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
     activeSection: FlightSection,
-    history: LogbookHistory
+    history: LogbookHistory,
+    gates: GateAssist
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -649,7 +674,7 @@ private fun MediumTwoColumnLayout(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             RouteHeader(draft, onDraftChange)
-            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history)
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history, gates)
         }
 
         ScratchpadCard(draft, onDraftChange)
@@ -663,7 +688,8 @@ private fun ExpandedWhiteboardLayout(
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
     activeSection: FlightSection,
-    history: LogbookHistory
+    history: LogbookHistory,
+    gates: GateAssist
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -676,7 +702,7 @@ private fun ExpandedWhiteboardLayout(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             RouteHeader(draft, onDraftChange)
-            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history)
+            ActiveSectionCard(draft, onDraftChange, qnhUnit, tempUnit, activeSection, history, gates)
         }
 
         ScratchpadCard(draft, onDraftChange)
@@ -691,15 +717,16 @@ private fun ActiveSectionCard(
     qnhUnit: QnhUnit,
     tempUnit: TempUnit,
     activeSection: FlightSection,
-    history: LogbookHistory
+    history: LogbookHistory,
+    gates: GateAssist
 ) {
     when (activeSection) {
         FlightSection.DEPARTURE -> SectionCard(title = "Departure + Enroute") {
-            DepartureEnrouteFields(draft, onDraftChange, qnhUnit, history)
+            DepartureEnrouteFields(draft, onDraftChange, qnhUnit, history, gates)
         }
 
         FlightSection.ARRIVAL -> SectionCard(title = "Arrival") {
-            ArrivalFields(draft, onDraftChange, qnhUnit, history)
+            ArrivalFields(draft, onDraftChange, qnhUnit, history, gates)
         }
 
         FlightSection.AIRCRAFT -> SectionCard(title = "Aircraft + Performance") {
@@ -806,7 +833,8 @@ private fun DepartureEnrouteFields(
     draft: FlightDraft,
     onChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
-    history: LogbookHistory
+    history: LogbookHistory,
+    gates: GateAssist = GateAssist.Off
 ) {
     FlightTypeDropdown(
         flightType = draft.flightType,
@@ -839,6 +867,8 @@ private fun DepartureEnrouteFields(
             modifier = Modifier.weight(1f)
         )
     }
+
+    AssignGateChip(icao = draft.dep, gate = draft.depGate, gates = gates, side = GateSide.DEPARTURE)
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextFieldSmall(
@@ -896,7 +926,8 @@ private fun ArrivalFields(
     d: FlightDraft,
     onChange: (FlightDraft) -> Unit,
     qnhUnit: QnhUnit,
-    history: LogbookHistory
+    history: LogbookHistory,
+    gates: GateAssist = GateAssist.Off
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         RunwayField(
@@ -921,6 +952,8 @@ private fun ArrivalFields(
             modifier = Modifier.weight(1f)
         )
     }
+
+    AssignGateChip(icao = d.arr, gate = d.arrGate, gates = gates, side = GateSide.ARRIVAL)
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         AirportField(
@@ -1681,6 +1714,41 @@ private fun LearnedField(
         onSuggestionSelected = { onValueChange(it) },
         itemContent = { Text(it) },
         modifier = modifier
+    )
+}
+
+private enum class GateSide { DEPARTURE, ARRIVAL }
+
+/** Everything the "Get FDV gate" chip needs, passed down as one parameter. Off when it can't be used. */
+private data class GateAssist(
+    val available: Boolean,
+    val loading: Boolean,
+    val onAssign: (GateSide) -> Unit
+) {
+    companion object {
+        val Off = GateAssist(available = false, loading = false, onAssign = {})
+    }
+}
+
+private val IcaoCode = Regex("[A-Z0-9]{4}")
+
+/** "Get FDV gate", shown only while the Gate field is empty and the airport is a real ICAO code. */
+@Composable
+private fun AssignGateChip(icao: String, gate: String?, gates: GateAssist, side: GateSide) {
+    val code = icao.trim().uppercase()
+    if (!gates.available || !gate.isNullOrBlank() || !IcaoCode.matches(code)) return
+
+    AssistChip(
+        onClick = { gates.onAssign(side) },
+        enabled = !gates.loading,
+        label = { Text("Get FDV gate at $code") },
+        leadingIcon = {
+            if (gates.loading) {
+                CircularProgressIndicator(modifier = Modifier.size(AssistChipDefaults.IconSize), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Filled.MeetingRoom, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
+            }
+        }
     )
 }
 

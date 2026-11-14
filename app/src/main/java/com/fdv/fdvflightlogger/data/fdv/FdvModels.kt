@@ -305,3 +305,13 @@ data class FdvEvent(
     fun isLiveAt(now: Long): Boolean = now in startsAtMillis until endsAtMillis
     fun hasEndedAt(now: Long): Boolean = now >= endsAtMillis
 }
+
+// ---- /airports/{icao}/gates/assign ----
+
+data class FdvGate(val terminal: String?, val gate: String)
+
+/** FDV's answer to "give me a gate": one gate, or none on file for that airport. */
+sealed interface GateAssignment {
+    data class Assigned(val gate: FdvGate) : GateAssignment
+    data object NoGates : GateAssignment
+}
