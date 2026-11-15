@@ -315,3 +315,30 @@ sealed interface GateAssignment {
     data class Assigned(val gate: FdvGate) : GateAssignment
     data object NoGates : GateAssignment
 }
+
+// ---- /fleet ----
+
+@Serializable
+internal data class FleetDto(
+    val id: Long? = null,
+    val icao: String? = null,
+    val name: String? = null,
+    val manufacturer: String? = null,
+    val passengers: Int? = null,
+    @SerialName("range_nm") val rangeNm: Int? = null,
+    @SerialName("min_rank") val minRank: RankDto? = null,     // null = any rank
+    @SerialName("can_fly") val canFly: Boolean = true,        // for the signed-in pilot's rank
+    val registrations: Int = 0
+)
+
+/** An aircraft type in FDV's fleet, and whether this pilot's rank can fly it. */
+data class FdvFleetType(
+    val icao: String,
+    val name: String,
+    val manufacturer: String?,
+    val passengers: Int?,
+    val rangeNm: Int?,
+    val minRank: String?,
+    val canFly: Boolean,
+    val registrations: Int
+)

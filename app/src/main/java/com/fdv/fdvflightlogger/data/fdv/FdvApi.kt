@@ -94,6 +94,13 @@ object FdvApi {
         return interpretGateAssign(status, body)
     }
 
+    /** FDV's fleet keyed by ICAO type, with can-fly for this pilot's rank. */
+    @Throws(FdvApiException::class)
+    suspend fun fleet(token: String): Map<String, FdvFleetType> {
+        val (status, body) = get("/fleet", token)
+        return interpretFleet(status, body)
+    }
+
     private suspend fun get(path: String, token: String): Pair<Int, String> = try {
         val response = AppHttp.client.get("${FdvAuth.API_BASE}$path") {
             bearerAuth(token)
@@ -285,6 +292,31 @@ object FdvApi {
         }
         val gate = dto.gate?.trim()?.uppercase()?.takeIf { it.isNotEmpty() } ?: return GateAssignment.NoGates
         return GateAssignment.Assigned(FdvGate(terminal = dto.terminal?.trim()?.takeIf { it.isNotEmpty() }, gate = gate))
+    }
+
+    internal fun interpretFleet(status: Int, body: String): Map<String, FdvFleetType> {
+        val list = okObject(status, body)["data"] as? JsonArray ?: throw FdvApiException(UNREADABLE)
+        val dtos = try {
+            AppHttp.json.decodeFromJsonElement(ListSerializer(FleetDto.serializer()), list)
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        val types = dtos.mapNotNull { dto ->
+            val icao = dto.icao?.trim()?.uppercase()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            FdvFleetType(
+                icao = icao,
+                name = dto.name?.trim()?.takeIf { it.isNotEmpty() } ?: icao,
+                manufacturer = dto.manufacturer?.trim()?.takeIf { it.isNotEmpty() },
+                passengers = dto.passengers,
+                rangeNm = dto.rangeNm,
+                minRank = dto.minRank?.name?.trim()?.takeIf { it.isNotEmpty() },
+                canFly = dto.canFly,
+                registrations = dto.registrations
+            )
+        }
+        // Keyed by type so the picker can look one up instantly. If FDV ever lists a type twice,
+        // the first one wins (associateBy alone would keep the last).
+        return types.distinctBy { it.icao }.associateBy { it.icao }
     }
 
     private val AIRLINE_CODE = Regex("[A-Z]{3}")

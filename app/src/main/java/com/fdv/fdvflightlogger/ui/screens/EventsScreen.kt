@@ -63,6 +63,7 @@ import com.fdv.fdvflightlogger.ui.components.eventWindow
 import com.fdv.fdvflightlogger.ui.components.rememberNow
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
+import com.fdv.fdvflightlogger.data.fdv.EventBonuses
 
 // Cards stop growing past this on a tablet, so banners and lines of text stay a readable size
 private val MaxCardWidth = 720.dp
@@ -184,6 +185,13 @@ private fun EventCard(event: FdvEvent, now: Long, onOpenPage: (String) -> Unit) 
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(event.name, style = MaterialTheme.typography.titleLarge)
             eventRoute(event)?.let { Text(it, style = MaterialTheme.typography.titleSmall, color = cs.secondary) }
+            if (EventBonuses.qualifies(event)) {
+                Text(
+                    text = "CAT Free · double hours",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = cs.primary
+                )
+            }
             Text(eventTiming(event, now), style = MaterialTheme.typography.bodyMedium)
             Text(eventWindow(event), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             PilotsLine(event)

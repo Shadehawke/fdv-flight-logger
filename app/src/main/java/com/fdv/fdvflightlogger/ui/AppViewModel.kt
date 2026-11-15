@@ -84,6 +84,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import com.fdv.fdvflightlogger.data.fdv.GateAssignment
 import com.fdv.fdvflightlogger.data.sync.PirepStatusSync
+import com.fdv.fdvflightlogger.data.fdv.FdvFleetType
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -165,6 +166,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _bidLoading = MutableStateFlow(false)
     private val _gateLoading = MutableStateFlow(false)
     val gateLoading: StateFlow<Boolean> = _gateLoading.asStateFlow()
+    // FDV's fleet; empty when signed out or not loaded yet. Loaded once per app session.
+    private val _fleet = MutableStateFlow<Map<String, FdvFleetType>>(emptyMap())
+    val fleet: StateFlow<Map<String, FdvFleetType>> = _fleet.asStateFlow()
+
+    private var fleetLoading = false
     private val _pirepSyncing = MutableStateFlow(false)
     val fdvSync: StateFlow<FdvSyncState> = repo.fdvSyncFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FdvSyncState())
@@ -490,6 +496,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             _fdvPilot.value = null
             _awards.value = null
             _fdvEvents.value = null
+            _fleet.value = emptyMap()
             eventsLoadedAt = 0L
             session?.let { FdvAuthClient.logout(it.token) }
             _events.tryEmit(UiEvent.Message("Signed out of FDV"))
@@ -634,6 +641,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    /** Silent: if it fails, the picker simply works without FDV marks, and the next visit tries again. */
+    fun loadFleetQuietly() {
+        if (fleetLoading || _fleet.value.isNotEmpty()) return
+        viewModelScope.launch {
+            fleetLoading = true
+            try {
+                val session = sessionStore.session.first()
+                    ?.takeUnless { it.isExpired(System.currentTimeMillis()) }
+                    ?: return@launch
+                _fleet.value = FdvApi.fleet(session.token)
+            } catch (e: FdvApiException) {
+                // Nothing to show: the picker falls back to the built-in list
+            } finally {
+                fleetLoading = false
+            }
+        }
+    }
+
 
     private suspend fun fetchBid(id: Long, onLoaded: (FdvBidPlan) -> Unit) {
         val bid = fdvCall { token -> FdvApi.bid(token, id) } ?: return

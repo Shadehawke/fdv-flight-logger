@@ -103,12 +103,35 @@ import kotlin.math.roundToInt
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.layout.widthIn
+import com.fdv.fdvflightlogger.data.aircraft.AircraftSuggestions
+import com.fdv.fdvflightlogger.data.fdv.EventBonus
+import com.fdv.fdvflightlogger.data.fdv.EventBonuses
+import com.fdv.fdvflightlogger.data.fdv.FdvFleetType
+import com.fdv.fdvflightlogger.ui.components.LivePill
+import com.fdv.fdvflightlogger.ui.components.eventTiming
+import com.fdv.fdvflightlogger.ui.components.rememberNow
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
+
+/** What the aircraft picker needs from FDV: the fleet, and whether this flight's rank check is waived. */
+private data class FleetContext(
+    val fleet: Map<String, FdvFleetType> = emptyMap(),
+    val rankWaived: Boolean = false
+)
+
+// Provided once at the screen and read by the aircraft field, four levels down
+private val LocalFleetContext = compositionLocalOf { FleetContext() }
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -275,6 +298,23 @@ fun FlightLogScreen(
     val fdvSession by appViewModel.fdvSession.collectAsStateWithLifecycle()
     val bidLoading by appViewModel.bidLoading.collectAsStateWithLifecycle()
     val gateLoading by appViewModel.gateLoading.collectAsStateWithLifecycle()
+    val fleet by appViewModel.fleet.collectAsStateWithLifecycle()
+    val fdvEvents by appViewModel.fdvEvents.collectAsStateWithLifecycle()
+    val now = rememberNow()
+
+    // While signed in: the fleet once per session; events reuse the 10-minute cache from the dashboard
+    LaunchedEffect(fdvSession != null) {
+        if (fdvSession != null) {
+            appViewModel.loadFleetQuietly()
+            appViewModel.loadEvents()
+        }
+    }
+
+    // Only for a flight being logged now: FDV's event list doesn't include past events
+    val eventBonus = remember(fdvEvents, draft.dep, draft.arr, now, editFlightId) {
+        if (editFlightId != null) null else EventBonuses.find(fdvEvents.orEmpty(), draft.dep, draft.arr, now)
+    }
+    val fleetContext = FleetContext(fleet = fleet, rankWaived = eventBonus != null)
     val confirmBid = rememberSaveable { mutableStateOf(false) }
     // Plain remember: FdvBid isn't saveable, and after a rotation the pilot can simply tap again
     var bidChoices by remember { mutableStateOf<List<FdvBid>>(emptyList()) }
@@ -561,6 +601,8 @@ fun FlightLogScreen(
                 currentFlight = draft
             )
 
+            eventBonus?.let { EventBonusBanner(it, now) }
+
             SectionJumpChips(
                 activeSection = activeSection,
                 showAtc = draft.flightType != FlightType.OFFLINE_NO_ATC,
@@ -585,37 +627,38 @@ fun FlightLogScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .fillMaxWidth()
             )
+            CompositionLocalProvider(LocalFleetContext provides fleetContext) {
+                when (widthClass) {
+                    WindowWidthSizeClass.Expanded -> ExpandedWhiteboardLayout(
+                        draft = draft,
+                        onDraftChange = { draft = it },
+                        qnhUnit = state.settings.qnhUnit,
+                        tempUnit = state.settings.tempUnit,
+                        activeSection = activeSection,
+                        history = logbookHistory,
+                        gates = gateAssist
+                    )
 
-            when (widthClass) {
-                WindowWidthSizeClass.Expanded -> ExpandedWhiteboardLayout(
-                    draft = draft,
-                    onDraftChange = { draft = it },
-                    qnhUnit = state.settings.qnhUnit,
-                    tempUnit = state.settings.tempUnit,
-                    activeSection = activeSection,
-                    history = logbookHistory,
-                    gates = gateAssist
-                )
+                    WindowWidthSizeClass.Medium -> MediumTwoColumnLayout(
+                        draft = draft,
+                        onDraftChange = { draft = it },
+                        qnhUnit = state.settings.qnhUnit,
+                        tempUnit = state.settings.tempUnit,
+                        activeSection = activeSection,
+                        history = logbookHistory,
+                        gates = gateAssist
+                    )
 
-                WindowWidthSizeClass.Medium -> MediumTwoColumnLayout(
-                    draft = draft,
-                    onDraftChange = { draft = it },
-                    qnhUnit = state.settings.qnhUnit,
-                    tempUnit = state.settings.tempUnit,
-                    activeSection = activeSection,
-                    history = logbookHistory,
-                    gates = gateAssist
-                )
-
-                else -> CompactSingleColumnLayout(
-                    draft = draft,
-                    onDraftChange = { draft = it },
-                    qnhUnit = state.settings.qnhUnit,
-                    tempUnit = state.settings.tempUnit,
-                    activeSection = activeSection,
-                    history = logbookHistory,
-                    gates = gateAssist
-                )
+                    else -> CompactSingleColumnLayout(
+                        draft = draft,
+                        onDraftChange = { draft = it },
+                        qnhUnit = state.settings.qnhUnit,
+                        tempUnit = state.settings.tempUnit,
+                        activeSection = activeSection,
+                        history = logbookHistory,
+                        gates = gateAssist
+                    )
+                }
             }
         }
     }
@@ -1644,8 +1687,9 @@ private fun AircraftField(
     onValueChange: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val suggestions = remember(value) { AircraftTypes.search(value) }
-    val matched = remember(value) { AircraftTypes.getByIcao(value) }
+    val (fleet, rankWaived) = LocalFleetContext.current
+    val suggestions = remember(value, fleet, rankWaived) { AircraftSuggestions.search(value, fleet, rankWaived) }
+    val description = remember(value, fleet, rankWaived) { AircraftSuggestions.describe(value, fleet, rankWaived) }
 
     AutocompleteField(
         label = "Aircraft",
@@ -1653,21 +1697,100 @@ private fun AircraftField(
         onValueChange = { onValueChange(it.uppercase().takeIf { s -> s.isNotBlank() }) },
         suggestions = suggestions,
         onSuggestionSelected = { onValueChange(it.icao) },
-        itemContent = { type ->
-            Column {
-                Text(type.icao, style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = type.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+        itemContent = { s ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                // Types FDV doesn't fly stay choosable, just quieter, once a fleet is loaded
+                modifier = Modifier.alpha(if (fleet.isNotEmpty() && s.fleet == null) 0.6f else 1f)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(s.icao, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = s.name,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                FleetMark(s.fleet, rankWaived)
             }
         },
-        supportingText = matched?.name,
+        supportingText = description,
         modifier = modifier
     )
+}
+
+/** ✓ when flyable on this flight; padlock and rank for types normally above the pilot's rank; nothing otherwise. */
+@Composable
+private fun FleetMark(type: FdvFleetType?, rankWaived: Boolean) {
+    val cs = MaterialTheme.colorScheme
+    when {
+        type == null -> Unit
+        AircraftSuggestions.flyable(type, rankWaived) -> Icon(
+            Icons.Filled.CheckCircle,
+            contentDescription = if (type.canFly) "In your FDV fleet" else "Rank waived for this flight",
+            // Secondary colour when it's only flyable because of the waiver
+            tint = if (type.canFly) cs.primary else cs.secondary,
+            modifier = Modifier.size(18.dp)
+        )
+        else -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            type.minRank?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cs.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 110.dp)
+                )
+            }
+            Icon(
+                Icons.Filled.Lock,
+                contentDescription = "Normally above your FDV rank",
+                tint = cs.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+/** "Event flight: CAT Free · double hours", or when it starts, for an event this flight matches. */
+@Composable
+private fun EventBonusBanner(bonus: EventBonus, now: Long) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .raised(raisedColors())
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (bonus.live) {
+            LivePill()
+        } else {
+            Icon(Icons.Filled.Event, contentDescription = null, tint = cs.secondary)
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = bonus.event.name,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = if (bonus.live) {
+                    "Event flight: CAT Free · double hours"
+                } else {
+                    "${eventTiming(bonus.event, now)} · fly inside the window for CAT Free + double hours"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant
+            )
+        }
+    }
 }
 
 @Composable
