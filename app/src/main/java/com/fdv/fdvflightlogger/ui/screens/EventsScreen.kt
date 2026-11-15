@@ -263,5 +263,8 @@ private fun PilotsLine(event: FdvEvent) {
 }
 
 private fun openPage(context: Context, url: String) {
-    CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
+    val uri = Uri.parse(url)
+    // The link comes from FDV's data: only ever open a web page, never another app's custom scheme
+    if (uri.scheme != "https") return
+    CustomTabsIntent.Builder().build().launchUrl(context, uri)
 }

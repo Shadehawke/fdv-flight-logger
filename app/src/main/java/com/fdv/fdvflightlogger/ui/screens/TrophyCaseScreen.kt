@@ -281,8 +281,10 @@ private fun AwardArt(award: FdvAward, token: String?, modifier: Modifier = Modif
         ImageRequest.Builder(context)
             .data(url)
             .apply {
-                // Award art lives under FDV's /private/ path: send the pilot's token, but only to FDV itself
-                if (token != null && Uri.parse(url).host == "flydeltavirtual.com") {
+                // Award art lives under FDV's /private/ path: send the pilot's token, but only to FDV itself,
+                // and only over an encrypted connection
+                val target = Uri.parse(url)
+                if (token != null && target.scheme == "https" && target.host == "flydeltavirtual.com") {
                     httpHeaders(NetworkHeaders.Builder().set("Authorization", "Bearer $token").build())
                 }
             }

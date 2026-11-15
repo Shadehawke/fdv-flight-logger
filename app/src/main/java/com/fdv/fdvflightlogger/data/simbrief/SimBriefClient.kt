@@ -45,8 +45,8 @@ object SimBriefClient {
 
         if (status == HttpStatusCode.OK) return body
 
-        // Logged so a failed import can be diagnosed in Logcat; truncated to keep the log readable
-        Log.w("SimBrief", "HTTP ${status.value}: ${body.take(300)}")
+        // Status only: response bodies can echo the pilot's alias
+        Log.w("SimBrief", "HTTP ${status.value}")
         throw SimBriefException(errorMessage(body, status.value))
     }
 

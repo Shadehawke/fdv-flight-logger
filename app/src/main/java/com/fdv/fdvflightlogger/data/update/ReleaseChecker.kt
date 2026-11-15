@@ -86,7 +86,8 @@ object ReleaseChecker {
         if (AppVersion.parse(tag) == null) return null
 
         val apk = dto.assets.firstOrNull { asset ->
-            asset.name?.endsWith(".apk", ignoreCase = true) == true && asset.downloadUrl != null
+            asset.name?.endsWith(".apk", ignoreCase = true) == true &&
+                    asset.downloadUrl?.let(::isOwnReleaseDownload) == true
         }
 
         return AppRelease(
@@ -98,5 +99,16 @@ object ReleaseChecker {
             apkSize = apk?.size,
             apkSha256 = apk?.digest?.removePrefix("sha256:")
         )
+    }
+
+    /** An APK URL is only trusted if it's an https download from this repository's own releases. */
+    internal fun isOwnReleaseDownload(url: String): Boolean {
+        val uri = try {
+            java.net.URI(url)
+        } catch (e: java.net.URISyntaxException) {
+            return false
+        }
+        return uri.scheme == "https" && uri.host == "github.com" &&
+                uri.path.orEmpty().startsWith("/$REPO/releases/download/")
     }
 }

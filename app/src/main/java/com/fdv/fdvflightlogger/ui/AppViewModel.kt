@@ -108,6 +108,8 @@ private const val EVENTS_MAX_AGE_MS = 10L * 60 * 1000
 // Reviews happen on staff time; checking more often than this on its own would only spend the rate limit
 private const val STATUS_CHECK_INTERVAL_MS = 30L * 60 * 1000
 
+private const val MAX_BACKUP_BYTES = 50 * 1024 * 1024
+
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo = UserPrefsRepository(getApplication<Application>().applicationContext)
@@ -377,7 +379,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val json = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { input ->
-                        input.readBytes().toString(Charsets.UTF_8)
+                        // Read in chunks and stop early: a real backup is a few MB even with thousands of flights
+                        val out = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read == -1) break
+                            out.write(buffer, 0, read)
+                            if (out.size() > MAX_BACKUP_BYTES) error("That file is too large to be an FDV backup")
+                        }
+                        out.toString(Charsets.UTF_8.name())
                     } ?: error("Unable to open file")
                 }
 

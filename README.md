@@ -1,84 +1,87 @@
 # FDV Flight Logger
 
-A flight-sim logbook for Android, built for virtual airline pilots. Log each flight as you fly it, from departure runway to landing flaps. Import plans straight from SimBrief, track your progress on a stats dashboard, and review, search, edit, export and back up your history.
+A flight-sim logbook for Android, built for [FlyDelta Virtual (FDV)](https://www.flydeltavirtual.com/) pilots. Log each flight as you fly it, from departure runway to landing flaps. Sign in with your FDV account to pull in your bookings, PIREPs, rank, awards and events, or use it on its own as a standalone logbook.
 
-Built with Jetpack Compose, Material 3 and Room. Designed around [FlyDelta Virtual (FDV)](https://www.flydeltavirtual.com/), but usable by any VA pilot. Airport, runway and aircraft data are bundled in the app, and everything works offline except SimBrief import.
+Built with Kotlin, Jetpack Compose, Material 3 and Room. Airport, runway and aircraft data are bundled, so logging works offline. The network is used only for FDV, SimBrief and app updates (see [Privacy](#-privacy)).
 
-**Current version:** 1.1.0
-
+**Latest release:** 1.2.1 · **In development:** 1.3.0
+ 
 ---
 
 ## ✈️ Features
 
+### FlyDelta Virtual account
+- **Sign in with FDV** (email/password or VATSIM) through the system browser. The app never sees your password.
+- **Pilot card:** rank, progress to the next rank, FDV hours (flown, bonus and transfer), flights and flight streak
+- **Start from my booking:** fills a new flight from an FDV booking, including the SimBrief plan and gates
+- **Get an FDV gate** for flights without a booking, picked the way FDV does for bookings
+- **Sync actuals** from your PIREP (block and air time, fuel used, landing rate, passengers), import your **full FDV history**, and **sync new flights** later. Air times fill in in the background.
+- **PIREP review status:** Pending and Rejected flights are badged. The dashboard counts approved flights only, like FDV.
+- **Trophy Case:** your FDV awards on a wall and your trophies on rarity shelves, with locked ones shown
+- **Events:** what's live now and what's coming up, with banners, times in local and Zulu, and registration status
+- **Fleet-aware aircraft picker:** shows which FDV types your rank can fly, and lifts the rank locks when your flight matches a CAT Free event
 ### Dashboard
-- **Home screen with animated arc gauges:** flights and block hours (filling toward the next milestone), online share, and hub share
-- **Summary tiles:** total great-circle distance, airports visited, longest flight
-- **Top aircraft and top routes**, plus a tappable **last flight** card
-- Updates live as flights are saved, edited, deleted or restored
-
+- Animated arc gauges: flights and block hours (toward the next milestone), online share and hub share
+- Total distance, airports visited, longest flight, top aircraft and routes, and a last-flight card
+- Event card for anything live or coming next, and a notice when an app update is available
 ### Logging
-- **Structured flight entry** in four tabbed sections: Departure + Enroute, Arrival, Aircraft + Performance, and ATC
-- **Three flight types:** Online, Offline with ATC, and Offline No ATC. The ATC section hides when it doesn't apply.
-- **Always-visible scratchpad** for taxi instructions, clearances and notes
-- **Auto-save** about every 60 seconds and when you leave the screen, updating the same record rather than creating duplicates
-- **Unsaved-changes guard** that confirms before you discard edits; in-progress flights survive rotation and trips to Settings
+- Structured entry in four sections: Departure + Enroute, Arrival, Aircraft + Performance and ATC
+- Online, Offline with ATC and Offline No ATC flight types. The ATC section hides when it doesn't apply.
+- Always-visible scratchpad, auto-save about every 60 seconds, and an unsaved-changes guard
 - **Fly Return Leg** and **Duplicate** from any saved flight
-
 ### SimBrief import
-- One tap imports your latest SimBrief plan: airports, runways, alternate, SID/STAR, route, cruise level, CI, airline, flight number, aircraft, fuel, weights, times, cruise wind and OAT, flaps, V2/Vref and QNH
-- Weights, QNH and temperature are converted to your unit settings
-- Planned fields replace what's there; gates, ATC details, scratchpad and flight type are kept
+- One tap imports your latest plan: airports, runways, alternate, SID/STAR, route, cruise level, CI, airline, flight number, aircraft, fuel, weights, times, cruise wind and OAT, flaps, V-speeds and QNH, converted to your units
 - Requests are made only when you tap Import, per SimBrief's API guidelines
-
 ### Smart lookups
-- **Airport search** for DEP, ARR and ALTN: about 5,900 airports, by ICAO code, name or city
-- **Runway picker:** the RWY fields list the runways at the selected airport
-- **Great-circle distance** between DEP and ARR on the route card
-- **Aircraft search** and **aircraft-aware flap settings** (Airbus `1+F / 2 / 3`, Boeing `1 / 5 / 15`, and so on)
-- **Airline list:** Delta, Delta Connection carriers, current SkyTeam members and Delta codeshare partners
-- **Delta Connection handling:** flights operated by Endeavor, SkyWest, Republic and other Connection carriers display under their DAL flight number everywhere
-- **Learned suggestions:** Gate, SID and STAR suggest what you've used before at that airport (ranked by runway, then frequency); an empty Route field offers routes previously flown between the same city pair
+- Airport search (about 5,900 airports), runway pickers and great-circle distance
+- Aircraft search with aircraft-aware flap settings (Airbus `1+F / 2 / 3`, Boeing `1 / 5 / 15`, …)
+- Delta, Delta Connection, SkyTeam and partner airlines. Connection flights show under their DAL number.
+- Gate, SID, STAR and route suggestions learned from your own logbook
 - Every lookup field still accepts free text
-
-### Input formatting
-- Times type as `0345` and display as `03:45`
-- Cruise wind types as `29045` and displays as `290/45`
-- QNH displays as `29.92` (inHg) or `1013` (hPa), following your unit setting
-- Procedure, gate, alternate and route fields are capitalized automatically
-- Values are stored as clean digits, and formatting is applied only for display
-
-### History, export & backup
-- Flight history with search across route, airline, flight number (including DAL numbers), aircraft, procedures and notes
-- Newest-first / oldest-first sorting
-- Flight detail view with return leg, duplicate, edit and delete
-- **Export to CSV and PDF**, with a Share shortcut when the export finishes
-- **Back up and restore** the full logbook as versioned JSON; restoring merges and skips flights you already have
-
-### Interface
-- Raised, reflective card styling with inset fields and FDV blue/red branding
-- Responsive layouts for **compact** (phones), **medium** (foldables / small tablets) and **expanded** (tablets) widths
-- Initial pilot setup (Pilot ID, name, hub, units), plus a SimBrief / Navigraph alias in Settings
-
+### History, export and backup
+- Search (including "pending" or "rejected"), sort, and a detail view with edit, return leg, duplicate and delete
+- **CSV and PDF export** with a Share shortcut
+- **Back up and restore** the whole logbook (and your profile photo) as versioned JSON. Restoring merges and skips flights you already have.
+### App
+- **In-app updates:** checks GitHub Releases daily, then downloads, verifies and installs updates in the app (you confirm each install)
+- Profile photo, animated splash, branded title bars, and FDV, Light and Dark themes
+- Layouts for phones, foldables (including cover screens) and tablets
 ---
 
 ## 📱 Requirements
 
 - **Android 12 (API 31) or newer**
-- Optimized for tablets and fully usable on phones and foldables
-- Internet access only for SimBrief import
-- Tested on Samsung Galaxy Tab devices and modern Android phones
-
+- Designed for tablets and fully usable on phones and foldables
+- Internet only for FDV features, SimBrief import and update checks
 ---
 
 ## 📥 Installing
 
-1. Download the latest `app-release.apk` from the [Releases](../../releases) page.
+1. Download `fdv-flight-logger-<version>.apk` from the [Releases](../../releases) page.
 2. Open it on your device. If prompted, allow your browser or file manager to **install unknown apps**.
-3. When updating, install over the existing app. Your logbook carries over.
-
+3. From 1.2.1 on, the app finds and installs updates itself. You can also install a newer APK over the existing app. Your logbook carries over.
 > 💾 Flights are stored only on your device. Use **History → ⋮ → Back Up Logbook** regularly, and always before uninstalling or switching devices.
 
 A user guide PDF is attached to each release.
+ 
+---
+
+## 🔒 Privacy
+
+The app has **no analytics, ads, crash reporting or tracking**, and no server of its own. Your logbook stays on your device unless you export or back it up yourself.
+
+It talks to exactly these services, and only for the features listed:
+
+| Service | When | What's sent |
+|---|---|---|
+| `flydeltavirtual.com` | Signed in to FDV | Your FDV sign-in token. It reads your profile, bookings, PIREPs, awards, events, fleet and gates. Read-only: the app never files or changes anything on FDV. |
+| `simbrief.com` | You tap **Import** | Your SimBrief / Navigraph alias |
+| `api.github.com`, `github.com` | Once a day, and when you download an update | Nothing about you: a request for the latest release |
+
+- Your FDV sign-in token is encrypted with a key held in the Android Keystore, is excluded from device backups, and is deleted when you sign out. Tokens expire after 30 days.
+- Sign-in uses PKCE in the system browser, so your FDV password never passes through the app.
+- Updates are only installed if their size and SHA-256 match what GitHub published. Android also refuses any update that isn't signed with the same key as the installed app.
+  To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -86,35 +89,41 @@ A user guide PDF is attached to each release.
 
 | Area | Choice |
 |---|---|
-| Language | Kotlin 2.0 |
-| UI | Jetpack Compose + Material 3 (custom Canvas gauges) |
+| Language | Kotlin 2.4 |
+| UI | Jetpack Compose + Material 3 (custom Canvas gauges and animations) |
 | Architecture | MVVM (`AndroidViewModel` + `StateFlow`) |
 | Persistence | Room (with migrations) + DataStore |
-| Networking | `HttpURLConnection` + `org.json` (SimBrief only, no extra libraries) |
+| Networking | Ktor client (OkHttp engine) + kotlinx.serialization |
+| Images | Coil 3 |
+| Background work | WorkManager |
+| Sign-in | Custom Tabs + PKCE; token sealed with AES-GCM in the Android Keystore |
 | Navigation | Navigation Compose |
-| Build | Gradle (Kotlin DSL, Version Catalog) + KSP |
+| Build | Gradle (Kotlin DSL, version catalog) + KSP |
 | Tests | JUnit (JVM unit tests) |
-| Min / Target SDK | 31 / 36 |
-
+| Min / target SDK | 31 / 37 |
+ 
 ---
 
 ## 🛠️ Building from Source
 
 ### Prerequisites
-- Android Studio (recent stable). The bundled JDK is fine.
-- Android SDK 36
-
+- A recent stable Android Studio (the bundled JDK is fine)
+- Android SDK 37
 ### Debug build
 ```bash
 git clone https://github.com/Shadehawke/fdv-flight-logger.git
 ```
-Open the project in Android Studio and run the `app` configuration. Debug builds use the `.debug` application ID suffix, so they install alongside a release build with their own separate logbook.
+Open the project in Android Studio and run the `app` configuration.
+
+> Debug and release builds share one application ID, so a debug build replaces an installed release (Android will ask you to uninstall first, because the signatures differ). Back up your logbook before switching.
+
+FDV sign-in works in debug builds. Update checks are switched off in debug builds.
 
 ### Running tests
 ```bash
 ./gradlew testDebugUnitTest
 ```
-Unit tests cover the statistics calculator (totals, rankings, time parsing, milestones) and run on the JVM without a device.
+The unit tests run on the JVM without a device. They cover the FDV API parsing (using real response shapes), PIREP matching and history import, review status sync, event bonus rules, the aircraft picker, statistics, SimBrief parsing, sign-in (PKCE, callbacks, sessions) and update checks.
 
 ### Signed release build
 Release signing reads its credentials from an untracked `keystore.properties` in the project root:
@@ -130,20 +139,16 @@ Then:
 ```bash
 ./gradlew assembleRelease
 ```
-The signed APK is written to `app/build/outputs/apk/release/app-release.apk`.
+The signed APK is written to `app/build/outputs/apk/release/`. Attach it to the GitHub release as `fdv-flight-logger-<version>.apk`, with a `v<version>` tag, so the in-app updater finds it.
 
-> `keystore.properties` and `*.jks` are git-ignored. Never commit them, and back up your keystore. You can't publish updates without it.
+> `keystore.properties` and `*.jks` are git-ignored. **Never commit them,** and back up your keystore: updates can't be published without it.
 
-### Regenerating airport & runway data
-The bundled `app/src/main/assets/airports.json` (airports, runways and coordinates) is generated from [OurAirports](https://ourairports.com/data/) data:
+### Regenerating airport and runway data
+`app/src/main/assets/airports.json` is generated from [OurAirports](https://ourairports.com/data/) data:
 
-1. Download `airports.csv` and `runways.csv` from OurAirports into `tools/raw/` (git-ignored).
-2. Run:
-   ```bash
-   python tools/prepare_airports.py
-   ```
+1. Download `airports.csv` and `runways.csv` from OurAirports into `tools/raw/`.
+2. Run `python tools/prepare_airports.py`.
 3. Rebuild the app.
-
 ---
 
 ## 🗂️ Project Structure
@@ -154,59 +159,65 @@ app/src/main/
 └── java/com/fdv/fdvflightlogger/
     ├── data/
     │   ├── Airline.kt            # Airline list + DAL flight-number formatting
-    │   ├── aircraft/             # Aircraft types and flap settings by family
+    │   ├── aircraft/             # Aircraft types, flap settings, fleet-aware suggestions
     │   ├── airports/             # Airport repository (search, runways, distance)
+    │   ├── auth/                 # FDV sign-in: PKCE, callback checks, encrypted session
     │   ├── backup/               # Versioned JSON backup format
-    │   ├── db/                   # Room entities, DAO, migrations
+    │   ├── db/                   # Room entities, DAO, migrations, PIREP status
+    │   ├── fdv/                  # FDV API client, models, mappers, event bonus rules
     │   ├── history/              # Logbook-learned suggestions
+    │   ├── network/              # Shared HTTP client and JSON settings
     │   ├── prefs/                # DataStore profile + settings
+    │   ├── profile/              # Profile photo storage
     │   ├── simbrief/             # SimBrief client, parser and plan model
-    │   └── stats/                # Dashboard statistics calculator
+    │   ├── stats/                # Dashboard statistics
+    │   ├── sync/                 # PIREP matching, history import, status sync, air-time worker
+    │   └── update/               # GitHub release check, download, verify, install
     ├── export/                   # CSV and PDF export
     └── ui/
-        ├── components/           # Reusable widgets (ArcGauge)
-        ├── mappers/              # Entity/draft, SimBrief and template mapping
+        ├── components/           # Gauges, top bar, pilot card, events, badges
+        ├── mappers/              # Entity/draft and SimBrief mapping
         ├── nav/                  # Routes and nav graph
-        ├── screens/              # Dashboard, Log, History, Detail, Setup, Settings
+        ├── screens/              # Dashboard, Log, History, Detail, Setup, Settings,
+        │                         # Trophy Case, Events, Splash
         └── theme/                # Colors, typography, raised/inset surfaces
 tools/
 └── prepare_airports.py           # Builds airports.json from OurAirports CSVs
 ```
-
+ 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] Flight detail view
-- [x] Editable flight entries
-- [x] CSV and PDF export
-- [x] Search and sort
-- [x] Airport, runway and aircraft data
-- [x] Flight statistics dashboard
+Done:
+- [x] Logging, history, search, edit, CSV/PDF export, backup and restore
+- [x] Airport, runway and aircraft data; learned suggestions
+- [x] Statistics dashboard
 - [x] SimBrief import
-- [x] Backup and restore
-- [x] Return leg and duplicate
-- [x] Logbook-learned gate, SID, STAR and route suggestions
-- [ ] XLSX export
-- [ ] Filtering (by date range, airline, aircraft)
-- [ ] Airline-aware aircraft suggestions (selected airline's fleet first)
-- [ ] Configurable VA branding
-
+- [x] FDV sign-in, bookings, PIREP sync and history import
+- [x] In-app updates
+- [x] Rank progress, Trophy Case, Events, gate assignment, PIREP review status, fleet-aware aircraft picker
+  Next:
+- [ ] Built-in, searchable help
+- [ ] Landing stats and rating
+- [ ] Route map
+- [ ] CAT Free bonuses, rank waiver passes and wheels-up types (waiting on FDV API support)
+- [ ] Filtering by date range, airline and aircraft
 ---
 
 ## 🙏 Data Sources
 
 - Airport, runway and coordinate data from [OurAirports](https://ourairports.com/data/), released into the public domain.
 - Flight plan import uses the [SimBrief](https://www.simbrief.com/) API.
-
+- FDV data comes from FlyDelta Virtual's pilot API.
 ---
 
 ## ⚠️ Disclaimer
 
-This project is not affiliated with or endorsed by Delta Air Lines, FlyDelta Virtual, SimBrief, Navigraph, or any airline named in the app. All trademarks belong to their respective owners.
+This project is not affiliated with or endorsed by Delta Air Lines, SimBrief, Navigraph, or any airline named in the app. All trademarks belong to their respective owners.
 
 For flight simulation use only. Not for real-world navigation or flight planning.
-
+ 
 ---
 
 ## 📄 License

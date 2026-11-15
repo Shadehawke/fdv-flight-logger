@@ -16,3 +16,10 @@ local.properties
 keystore.properties
 *.jks
 *.keystore
+# JVM crash and Kotlin compiler logs (contain local paths and usernames)
+hs_err_pid*.log
+replay_pid*.log
+.kotlin/
+# Device-specific IDE state
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml

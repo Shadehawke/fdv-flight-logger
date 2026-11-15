@@ -70,8 +70,13 @@ object ExportCsv {
         return sb.toString()
     }
 
+    // A cell starting with these runs as a formula in Excel and Sheets
+    private val FORMULA_START = setOf('=', '+', '-', '@', '\t', '\r')
+
     private fun csvEscape(value: String?): String {
-        val v = (value ?: "")
+        val raw = value ?: ""
+        // Numbers such as a -285 landing rate stay numbers; anything else gets a leading ' so it shows as text
+        val v = if (raw.isNotEmpty() && raw[0] in FORMULA_START && raw.toDoubleOrNull() == null) "'$raw" else raw
         val needsQuotes = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r")
         if (!needsQuotes) return v
         return "\"" + v.replace("\"", "\"\"") + "\""
