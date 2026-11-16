@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -55,6 +56,7 @@ import com.fdv.fdvflightlogger.data.sync.ImportPlan
 import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.components.FdvAccountCard
 import com.fdv.fdvflightlogger.ui.components.FdvTopBar
+import com.fdv.fdvflightlogger.ui.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,6 +79,11 @@ fun SettingsScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { navController.navigate(Routes.HELP) }) {
+                        Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Help")
                     }
                 }
             )

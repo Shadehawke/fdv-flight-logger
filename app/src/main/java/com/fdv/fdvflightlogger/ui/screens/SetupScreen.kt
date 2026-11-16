@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,6 +19,8 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -47,7 +51,8 @@ import com.fdv.fdvflightlogger.ui.theme.GradientButton
 @Composable
 fun SetupScreen(
     appViewModel: AppViewModel,
-    onSetupComplete: () -> Unit
+    onSetupComplete: () -> Unit,
+    onOpenHelp: () -> Unit
 ) {
     var pilotId by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
@@ -75,7 +80,16 @@ fun SetupScreen(
     }
 
     Scaffold(
-        topBar = { FdvTopBar(title = { Text("Initial Setup") }) }
+        topBar = {
+            FdvTopBar(
+                title = { Text("Initial Setup") },
+                actions = {
+                    IconButton(onClick = onOpenHelp) {
+                        Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Help")
+                    }
+                }
+            )
+        }
     ) { padding ->
 
         val scrollState = rememberScrollState()
