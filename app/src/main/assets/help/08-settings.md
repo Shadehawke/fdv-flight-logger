@@ -22,7 +22,9 @@ The app checks for a new version once a day. When there is one, the dashboard sh
 
 1. Tap **Update**. The app downloads the update and checks it's genuine.
 2. Android asks you to confirm the install. The first time, it may ask you to allow this app to install apps.
-3. The app restarts on the new version. Your logbook is kept.
+3. Android closes the app while it installs the update. When it's done, a notification says so: tap it to open the new version. Your logbook is kept.
+
+The first time you tap **Update**, the app asks to show notifications, so it can tell you when the update has finished. If you say no, updates still work; just reopen the app yourself.
 
 To check yourself, go to **Settings**, **App updates**, **Check for updates**.
 

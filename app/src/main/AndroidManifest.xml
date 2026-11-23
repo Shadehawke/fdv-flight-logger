@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Lets the app ask Android to install its own updates; the user still confirms each one -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Android 13+: lets the app say "updated, tap to open" after an in-app update -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -42,6 +44,14 @@
         <receiver
             android:name=".data.update.InstallStatusReceiver"
             android:exported="false" />
+        <!-- Sent by Android to this app only, right after its own update is installed -->
+        <receiver
+            android:name=".data.update.UpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

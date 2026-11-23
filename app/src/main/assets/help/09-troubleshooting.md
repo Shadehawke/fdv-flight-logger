@@ -47,3 +47,9 @@ The app has no analytics, ads or tracking, and no server of its own. It only con
 - **GitHub**, once a day, to check for updates
 
 Your FDV sign-in is stored encrypted and is never included in backups.
+
+## "Scan app" or "may be harmful" when installing
+<!-- keywords: play protect, harmful, scan, unsafe, warning, blocked -->
+Android suggests scanning apps that come from outside the Play Store, and may warn about apps it hasn't seen many times before. FDV Flight Logger is open source: its code is public on GitHub, and it only installs its own updates from its own GitHub releases.
+
+If Android blocks the install, choose **More details** and then **Install anyway**.

@@ -87,6 +87,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import com.fdv.fdvflightlogger.ui.components.LandingCard
+import com.fdv.fdvflightlogger.ui.components.rememberStartUpdate
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -96,6 +97,7 @@ fun FlightLandingScreen(
     appViewModel: AppViewModel,
     navController: NavController
 ) {
+    val startUpdate = rememberStartUpdate(appViewModel)
     val fdvPilot by appViewModel.fdvPilot.collectAsStateWithLifecycle()
     val avatar by appViewModel.avatar.collectAsStateWithLifecycle()
     val availableUpdate by appViewModel.availableUpdate.collectAsStateWithLifecycle()
@@ -182,7 +184,7 @@ fun FlightLandingScreen(
                         stacked = stackUpdateCard,
                         downloadPercent = updateDownload,
                         onWhatsNew = { showReleaseNotes = true },
-                        onUpdate = { appViewModel.installUpdate(release) },
+                        onUpdate = { startUpdate(release) },
                         onLater = { appViewModel.dismissUpdate(release.version) }
                     )
                 }

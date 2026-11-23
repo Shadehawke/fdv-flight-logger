@@ -57,6 +57,7 @@ import com.fdv.fdvflightlogger.ui.AppViewModel
 import com.fdv.fdvflightlogger.ui.components.FdvAccountCard
 import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.nav.Routes
+import com.fdv.fdvflightlogger.ui.components.rememberStartUpdate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +65,7 @@ fun SettingsScreen(
     appViewModel: AppViewModel,
     navController: NavController
 ) {
+    val startUpdate = rememberStartUpdate(appViewModel)
     val state by appViewModel.state.collectAsStateWithLifecycle()
     val settings = state.settings
 
@@ -330,7 +332,7 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {
-                        OutlinedButton(onClick = { appViewModel.installUpdate(release) }) { Text("Update") }
+                        OutlinedButton(onClick = { startUpdate(release) }) { Text("Update") }
                     }
                 }
             }
