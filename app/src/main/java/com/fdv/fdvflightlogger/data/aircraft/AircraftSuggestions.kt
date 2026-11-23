@@ -7,8 +7,9 @@ data class AircraftSuggestion(val icao: String, val name: String, val fleet: Fdv
 
 object AircraftSuggestions {
 
-    /** Flyable for this flight: the pilot's rank allows it, or the rank check is waived (CAT Free, double hours). */
-    fun flyable(type: FdvFleetType?, rankWaived: Boolean): Boolean = type != null && (type.canFly || rankWaived)
+    /** Flyable on this flight: the rank allows it, it's an any-rank (Wheels Up) type, or the rank check is waived. */
+    fun flyable(type: FdvFleetType?, rankWaived: Boolean): Boolean =
+        type != null && (type.canFly || type.anyRank || rankWaived)
 
     /**
      * The built-in list plus any FDV types it doesn't have. With a fleet loaded: flyable first,
@@ -46,18 +47,34 @@ object AircraftSuggestions {
             .take(limit)
     }
 
-    /** The line under the field: "Airbus A321 · FDV fleet", "· rank waived", "· rank: …", "· not in FDV fleet". */
-    fun describe(icao: String?, fleet: Map<String, FdvFleetType>, rankWaived: Boolean = false): String? {
+    /**
+     * The line under the field: "· FDV fleet", "· any rank", "· rank waived", "· rank: …" (with a note
+     * when a waiver pass would be used), "· not in FDV fleet".
+     */
+    fun describe(
+        icao: String?,
+        fleet: Map<String, FdvFleetType>,
+        rankWaived: Boolean = false,
+        rankWaivers: Int = 0
+    ): String? {
         val code = icao?.trim()?.uppercase()?.takeIf { it.isNotEmpty() } ?: return null
         val onFdv = fleet[code]
         val name = AircraftTypes.getByIcao(code)?.name ?: onFdv?.name ?: return null
         if (fleet.isEmpty()) return name
         val note = when {
             onFdv == null -> "not in FDV fleet"
+            onFdv.anyRank -> "FDV fleet · any rank"
             onFdv.canFly -> "FDV fleet"
             rankWaived -> "FDV fleet · rank waived"
-            // Information, not a rule: CAT Free events and bonuses lift it
-            else -> onFdv.minRank?.let { "rank: $it" } ?: "above your FDV rank"
+            else -> {
+                // Information, not a rule. A pass would still let the flight auto-approve, but it gets used up.
+                val rank = onFdv.minRank?.let { "rank: $it" } ?: "above your FDV rank"
+                when {
+                    rankWaivers == 1 -> "$rank · would use your waiver pass"
+                    rankWaivers > 1 -> "$rank · would use 1 of $rankWaivers waiver passes"
+                    else -> rank
+                }
+            }
         }
         return "$name · $note"
     }

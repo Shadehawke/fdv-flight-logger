@@ -63,7 +63,9 @@ import com.fdv.fdvflightlogger.ui.components.eventWindow
 import com.fdv.fdvflightlogger.ui.components.rememberNow
 import com.fdv.fdvflightlogger.ui.theme.raised
 import com.fdv.fdvflightlogger.ui.theme.raisedColors
-import com.fdv.fdvflightlogger.data.fdv.EventBonuses
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.fdv.fdvflightlogger.data.fdv.FdvBonus
+import com.fdv.fdvflightlogger.data.fdv.FlightBonuses
 
 // Cards stop growing past this on a tablet, so banners and lines of text stay a readable size
 private val MaxCardWidth = 720.dp
@@ -72,6 +74,7 @@ private val MaxCardWidth = 720.dp
 @Composable
 fun EventsScreen(appViewModel: AppViewModel, navController: NavController) {
     val events by appViewModel.fdvEvents.collectAsStateWithLifecycle()
+    val bonuses by appViewModel.fdvBonuses.collectAsStateWithLifecycle()
     val loading by appViewModel.eventsLoading.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val now = rememberNow()
@@ -105,6 +108,7 @@ fun EventsScreen(appViewModel: AppViewModel, navController: NavController) {
             val visible = all.orEmpty().filterNot { it.hasEndedAt(now) }
             val live = visible.filter { it.isLiveAt(now) }
             val upcoming = visible.filterNot { it.isLiveAt(now) }
+            val activeBonuses = bonuses.orEmpty().filterNot { it.hasEndedAt(now) }
 
             when {
                 all == null && loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -115,7 +119,7 @@ fun EventsScreen(appViewModel: AppViewModel, navController: NavController) {
                     Text("Events couldn't be loaded.", style = MaterialTheme.typography.bodyLarge)
                     TextButton(onClick = { appViewModel.loadEvents(force = true) }) { Text("Try again") }
                 }
-                visible.isEmpty() -> Text(
+                visible.isEmpty() && activeBonuses.isEmpty() -> Text(
                     text = "No events on the calendar right now.\nCheck back soon.",
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
@@ -128,6 +132,13 @@ fun EventsScreen(appViewModel: AppViewModel, navController: NavController) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    if (activeBonuses.isNotEmpty()) {
+                        item(key = "header-bonuses") { SectionLabel("Bonuses") }
+                        // Bonuses have no id, so their position makes the key unique
+                        itemsIndexed(activeBonuses, key = { index, bonus -> "bonus-$index-${bonus.type}" }) { _, bonus ->
+                            BonusCard(bonus, now)
+                        }
+                    }
                     if (live.isNotEmpty()) {
                         item(key = "header-live") { SectionLabel("Happening now") }
                         items(live, key = { it.id }) { event ->
@@ -185,12 +196,8 @@ private fun EventCard(event: FdvEvent, now: Long, onOpenPage: (String) -> Unit) 
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(event.name, style = MaterialTheme.typography.titleLarge)
             eventRoute(event)?.let { Text(it, style = MaterialTheme.typography.titleSmall, color = cs.secondary) }
-            if (EventBonuses.qualifies(event)) {
-                Text(
-                    text = "CAT Free · double hours",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = cs.primary
-                )
+            FlightBonuses.perks(event.categoryFree, event.doubleHours)?.let { perks ->
+                Text(text = perks, style = MaterialTheme.typography.labelLarge, color = cs.primary)
             }
             Text(eventTiming(event, now), style = MaterialTheme.typography.bodyMedium)
             Text(eventWindow(event), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -267,4 +274,38 @@ private fun openPage(context: Context, url: String) {
     // The link comes from FDV's data: only ever open a web page, never another app's custom scheme
     if (uri.scheme != "https") return
     CustomTabsIntent.Builder().build().launchUrl(context, uri)
+}
+
+@Composable
+private fun BonusCard(bonus: FdvBonus, now: Long) {
+    val cs = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .widthIn(max = MaxCardWidth)
+            .fillMaxWidth()
+            .raised(raisedColors())
+            .clip(RoundedCornerShape(18.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = FlightBonuses.typeLabel(bonus.type),
+                style = MaterialTheme.typography.labelLarge,
+                color = cs.secondary,
+                modifier = Modifier.weight(1f)
+            )
+            if (now >= bonus.startsAtMillis) LivePill()
+        }
+        Text(bonus.label, style = MaterialTheme.typography.titleMedium)
+        FlightBonuses.where(bonus)?.let { Text(it, style = MaterialTheme.typography.titleSmall, color = cs.secondary) }
+        FlightBonuses.perks(bonus.categoryFree, bonus.doubleHours)?.let {
+            Text(it, style = MaterialTheme.typography.labelLarge, color = cs.primary)
+        }
+        Text(
+            text = FlightBonuses.describe(FlightBonuses.bonusWindow(bonus), now),
+            style = MaterialTheme.typography.bodySmall,
+            color = cs.onSurfaceVariant
+        )
+    }
 }

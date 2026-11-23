@@ -111,12 +111,15 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.widthIn
 import com.fdv.fdvflightlogger.data.aircraft.AircraftSuggestions
-import com.fdv.fdvflightlogger.data.fdv.EventBonus
-import com.fdv.fdvflightlogger.data.fdv.EventBonuses
 import com.fdv.fdvflightlogger.data.fdv.FdvFleetType
 import com.fdv.fdvflightlogger.ui.components.LivePill
 import com.fdv.fdvflightlogger.ui.components.eventTiming
 import com.fdv.fdvflightlogger.ui.components.rememberNow
+import androidx.compose.material.icons.filled.Schedule
+import com.fdv.fdvflightlogger.data.fdv.FlightBonus
+import com.fdv.fdvflightlogger.data.fdv.FlightBonuses
+import com.fdv.fdvflightlogger.data.fdv.WindowStatus
+import com.fdv.fdvflightlogger.data.stats.StatsCalculator
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -127,7 +130,8 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 /** What the aircraft picker needs from FDV: the fleet, and whether this flight's rank check is waived. */
 private data class FleetContext(
     val fleet: Map<String, FdvFleetType> = emptyMap(),
-    val rankWaived: Boolean = false
+    val rankWaived: Boolean = false,
+    val rankWaivers: Int = 0
 )
 
 // Provided once at the screen and read by the aircraft field, four levels down
@@ -300,6 +304,8 @@ fun FlightLogScreen(
     val gateLoading by appViewModel.gateLoading.collectAsStateWithLifecycle()
     val fleet by appViewModel.fleet.collectAsStateWithLifecycle()
     val fdvEvents by appViewModel.fdvEvents.collectAsStateWithLifecycle()
+    val fdvBonuses by appViewModel.fdvBonuses.collectAsStateWithLifecycle()
+    val fdvPilot by appViewModel.fdvPilot.collectAsStateWithLifecycle()
     val now = rememberNow()
 
     // While signed in: the fleet once per session; events reuse the 10-minute cache from the dashboard
@@ -310,11 +316,24 @@ fun FlightLogScreen(
         }
     }
 
-    // Only for a flight being logged now: FDV's event list doesn't include past events
-    val eventBonus = remember(fdvEvents, draft.dep, draft.arr, now, editFlightId) {
-        if (editFlightId != null) null else EventBonuses.find(fdvEvents.orEmpty(), draft.dep, draft.arr, now)
+    // Judged as if taking off now and landing after the flight's air time, when it's been entered.
+    // Only for a flight being logged now: FDV's lists don't include past events or bonuses.
+    val flightBonuses = remember(fdvEvents, fdvBonuses, draft.dep, draft.arr, draft.airTime, now, editFlightId) {
+        if (editFlightId != null) emptyList()
+        else FlightBonuses.find(
+            events = fdvEvents.orEmpty(),
+            bonuses = fdvBonuses.orEmpty(),
+            dep = draft.dep,
+            arr = draft.arr,
+            takeoff = now,
+            airMinutes = StatsCalculator.parseMinutes(draft.airTime)
+        )
     }
-    val fleetContext = FleetContext(fleet = fleet, rankWaived = eventBonus != null)
+    val fleetContext = FleetContext(
+        fleet = fleet,
+        rankWaived = flightBonuses.any { it.waivesRank },
+        rankWaivers = fdvPilot?.rankWaivers ?: 0
+    )
     val confirmBid = rememberSaveable { mutableStateOf(false) }
     // Plain remember: FdvBid isn't saveable, and after a rotation the pilot can simply tap again
     var bidChoices by remember { mutableStateOf<List<FdvBid>>(emptyList()) }
@@ -601,7 +620,7 @@ fun FlightLogScreen(
                 currentFlight = draft
             )
 
-            eventBonus?.let { EventBonusBanner(it, now) }
+            if (flightBonuses.isNotEmpty()) BonusBanner(flightBonuses, now)
 
             SectionJumpChips(
                 activeSection = activeSection,
@@ -1687,9 +1706,11 @@ private fun AircraftField(
     onValueChange: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val (fleet, rankWaived) = LocalFleetContext.current
+    val (fleet, rankWaived, rankWaivers) = LocalFleetContext.current
     val suggestions = remember(value, fleet, rankWaived) { AircraftSuggestions.search(value, fleet, rankWaived) }
-    val description = remember(value, fleet, rankWaived) { AircraftSuggestions.describe(value, fleet, rankWaived) }
+    val description = remember(value, fleet, rankWaived, rankWaivers) {
+        AircraftSuggestions.describe(value, fleet, rankWaived, rankWaivers)
+    }
 
     AutocompleteField(
         label = "Aircraft",
@@ -1756,37 +1777,50 @@ private fun FleetMark(type: FdvFleetType?, rankWaived: Boolean) {
     }
 }
 
-/** "Event flight: CAT Free · double hours", or when it starts, for an event this flight matches. */
+/** What this flight would earn: a ✓ when flying now counts, a clock and the window when it's not yet time. */
 @Composable
-private fun EventBonusBanner(bonus: EventBonus, now: Long) {
+private fun BonusBanner(bonuses: List<FlightBonus>, now: Long) {
     val cs = MaterialTheme.colorScheme
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .raised(raisedColors())
             .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        if (bonus.live) {
-            LivePill()
-        } else {
-            Icon(Icons.Filled.Event, contentDescription = null, tint = cs.secondary)
+        bonuses.take(3).forEach { bonus ->
+            val counts = bonus.status == WindowStatus.QUALIFIES
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(
+                    imageVector = if (counts) Icons.Filled.CheckCircle else Icons.Filled.Schedule,
+                    contentDescription = if (counts) "Counts if flown now" else "Not in the window yet",
+                    tint = if (counts) cs.primary else cs.secondary
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = bonus.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = listOfNotNull(bonus.kind, FlightBonuses.perks(bonus.categoryFree, bonus.doubleHours))
+                            .joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cs.primary
+                    )
+                    Text(
+                        text = FlightBonuses.describe(bonus.window, now),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cs.onSurfaceVariant
+                    )
+                }
+            }
         }
-        Column(modifier = Modifier.weight(1f)) {
+        if (bonuses.size > 3) {
             Text(
-                text = bonus.event.name,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = if (bonus.live) {
-                    "Event flight: CAT Free · double hours"
-                } else {
-                    "${eventTiming(bonus.event, now)} · fly inside the window for CAT Free + double hours"
-                },
-                style = MaterialTheme.typography.bodySmall,
+                text = "+${bonuses.size - 3} more",
+                style = MaterialTheme.typography.labelMedium,
                 color = cs.onSurfaceVariant
             )
         }

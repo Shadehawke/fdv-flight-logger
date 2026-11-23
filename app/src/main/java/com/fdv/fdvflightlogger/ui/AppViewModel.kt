@@ -85,6 +85,7 @@ import java.io.IOException
 import com.fdv.fdvflightlogger.data.fdv.GateAssignment
 import com.fdv.fdvflightlogger.data.sync.PirepStatusSync
 import com.fdv.fdvflightlogger.data.fdv.FdvFleetType
+import com.fdv.fdvflightlogger.data.fdv.FdvBonus
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -121,6 +122,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val events: SharedFlow<UiEvent> = _events.asSharedFlow()
+
+    // FDV bonuses (Flight of the Day, Airport of the Month, …); loaded and cached with events
+    private val _fdvBonuses = MutableStateFlow<List<FdvBonus>?>(null)
+    val fdvBonuses: StateFlow<List<FdvBonus>?> = _fdvBonuses.asStateFlow()
 
     private val _simBriefLoading = MutableStateFlow(false)
     val simBriefLoading: StateFlow<Boolean> = _simBriefLoading.asStateFlow()
@@ -507,6 +512,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             _fdvPilot.value = null
             _awards.value = null
             _fdvEvents.value = null
+            _fdvBonuses.value = null
             _fleet.value = emptyMap()
             eventsLoadedAt = 0L
             session?.let { FdvAuthClient.logout(it.token) }
@@ -563,9 +569,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Loads FDV events. [force] is the refresh button: always fetches and reports errors.
-     * Otherwise (dashboard, opening the screen) data under 10 minutes old is reused, and a failure
-     * stays silent so the dashboard doesn't show an error on every launch.
+     * Loads FDV events and bonuses. [force] is the refresh button: always fetches and reports errors.
+     * Otherwise data under 10 minutes old is reused, and a failure stays silent.
      */
     fun loadEvents(force: Boolean = false) {
         if (_eventsLoading.value) return
@@ -575,26 +580,40 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _eventsLoading.value = true
             try {
-                val events = if (force) {
-                    fdvCall { token -> FdvApi.events(token) }
+                val loaded = if (force) {
+                    fdvCall { token -> fetchEventsAndBonuses(token) }
                 } else {
                     val session = sessionStore.session.first()
                         ?.takeUnless { it.isExpired(System.currentTimeMillis()) }
                         ?: return@launch
                     try {
-                        FdvApi.events(session.token)
+                        fetchEventsAndBonuses(session.token)
                     } catch (e: FdvApiException) {
                         null
                     }
                 }
-                if (events != null) {
-                    _fdvEvents.value = events
+                if (loaded != null) {
+                    _fdvEvents.value = loaded.first
+                    _fdvBonuses.value = loaded.second
                     eventsLoadedAt = System.currentTimeMillis()
                 }
             } finally {
                 _eventsLoading.value = false
             }
         }
+    }
+
+    /** Events, plus bonuses when FDV can give them: a bonus failure never hides the events. */
+    private suspend fun fetchEventsAndBonuses(token: String): Pair<List<FdvEvent>, List<FdvBonus>> {
+        val events = FdvApi.events(token)
+        val bonuses = try {
+            FdvApi.bonuses(token)
+        } catch (e: FdvApiException) {
+            // Signed out affects everything, so that one still goes up; anything else keeps the last bonuses
+            if (e.signedOut) throw e
+            _fdvBonuses.value.orEmpty()
+        }
+        return events to bonuses
     }
 
     /**

@@ -87,6 +87,13 @@ object FdvApi {
         return interpretEvents(status, body)
     }
 
+    /** FDV's current and upcoming bonuses. */
+    @Throws(FdvApiException::class)
+    suspend fun bonuses(token: String): List<FdvBonus> {
+        val (status, body) = get("/bonuses", token)
+        return interpretBonuses(status, body)
+    }
+
     /** A gate at [icao] chosen the way FDV does for bookings. Random on each call: ask once per flight. */
     @Throws(FdvApiException::class)
     suspend fun assignGate(token: String, icao: String, airline: String?, aircraft: String?): GateAssignment {
@@ -148,7 +155,8 @@ object FdvApi {
                 ?.icao?.takeIf { it.isNotBlank() },
             hoursFlown = me.hoursBreakdown?.flown,
             hoursBonus = me.hoursBreakdown?.bonus,
-            hoursTransfer = me.hoursBreakdown?.transferApplied
+            hoursTransfer = me.hoursBreakdown?.transferApplied,
+            rankWaivers = me.rankWaivers?.coerceAtLeast(0)
         )
     }
 
@@ -260,7 +268,44 @@ object FdvApi {
                 url = dto.url?.trim()?.takeIf { it.isNotEmpty() },
                 registered = dto.registered,
                 registeredPilots = dto.registeredPilots ?: 0,
-                maxPilots = dto.maxPilots
+                maxPilots = dto.maxPilots,
+                // FDV's own flags; a response without them falls back to the category rule
+                categoryFree = dto.categoryFree ?: FlightBonuses.isBonusCategory(dto.category),
+                doubleHours = dto.doubleHours ?: FlightBonuses.isBonusCategory(dto.category)
+            )
+        }.sortedBy { it.startsAtMillis }
+    }
+
+    internal fun interpretBonuses(status: Int, body: String): List<FdvBonus> {
+        val list = okObject(status, body)["data"] as? JsonArray ?: throw FdvApiException(UNREADABLE)
+        val dtos = try {
+            AppHttp.json.decodeFromJsonElement(ListSerializer(BonusDto.serializer()), list)
+        } catch (e: IllegalArgumentException) {
+            throw FdvApiException(UNREADABLE)
+        }
+        return dtos.mapNotNull { dto ->
+            // A match rule the app doesn't know can't be judged, so that bonus is left out rather than guessed
+            val match = when (dto.match?.trim()?.lowercase()) {
+                "route" -> BonusMatch.ROUTE
+                "either_end" -> BonusMatch.EITHER_END
+                "departure" -> BonusMatch.DEPARTURE
+                "arrival" -> BonusMatch.ARRIVAL
+                "any" -> BonusMatch.ANY
+                else -> return@mapNotNull null
+            }
+            val starts = dto.startsAt?.let(::isoMillis) ?: return@mapNotNull null
+            val ends = dto.endsAt?.let(::isoMillis)?.takeIf { it > starts } ?: return@mapNotNull null
+            val type = dto.type?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "bonus"
+            FdvBonus(
+                type = type,
+                label = dto.label?.trim()?.takeIf { it.isNotEmpty() } ?: FlightBonuses.typeLabel(type),
+                departureIcao = dto.departure?.icao?.trim()?.uppercase()?.takeIf { it.isNotEmpty() },
+                arrivalIcao = dto.arrival?.icao?.trim()?.uppercase()?.takeIf { it.isNotEmpty() },
+                startsAtMillis = starts,
+                endsAtMillis = ends,
+                categoryFree = dto.categoryFree,
+                doubleHours = dto.doubleHours,
+                match = match
             )
         }.sortedBy { it.startsAtMillis }
     }
@@ -311,7 +356,8 @@ object FdvApi {
                 rangeNm = dto.rangeNm,
                 minRank = dto.minRank?.name?.trim()?.takeIf { it.isNotEmpty() },
                 canFly = dto.canFly,
-                registrations = dto.registrations
+                registrations = dto.registrations,
+                anyRank = dto.anyRank
             )
         }
         // Keyed by type so the picker can look one up instantly. If FDV ever lists a type twice,

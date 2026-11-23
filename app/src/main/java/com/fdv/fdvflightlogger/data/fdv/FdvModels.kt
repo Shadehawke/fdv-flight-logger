@@ -17,7 +17,8 @@ internal data class MeDto(
     val streak: StreakDto? = null,
     @SerialName("next_rank") val nextRank: NextRankDto? = null,   // null at the top rank
     val location: LocationDto? = null,
-    @SerialName("hours_breakdown") val hoursBreakdown: HoursBreakdownDto? = null
+    @SerialName("hours_breakdown") val hoursBreakdown: HoursBreakdownDto? = null,
+    @SerialName("rank_waivers") val rankWaivers: Int? = null
 )
 
 @Serializable
@@ -72,7 +73,8 @@ data class FdvPilot(
     val lastFlightLocation: String? = null,       // ICAO where the last filed flight landed
     val hoursFlown: Double? = null,
     val hoursBonus: Double? = null,
-    val hoursTransfer: Double? = null             // the transfer hours that count (capped at 200)
+    val hoursTransfer: Double? = null,             // the transfer hours that count (capped at 200)
+    val rankWaivers: Int? = null                  // rank waiver passes held on FDV
 ) {
     /** How far from the current rank's hours to the next rank's (0–1), or null when unknown or at the top. */
     val rankProgress: Float?
@@ -281,7 +283,9 @@ internal data class EventDto(
     val url: String? = null,
     val registered: Boolean = false,
     @SerialName("registered_pilots") val registeredPilots: Int? = null,
-    @SerialName("max_pilots") val maxPilots: Int? = null
+    @SerialName("max_pilots") val maxPilots: Int? = null,
+    @SerialName("category_free") val categoryFree: Boolean? = null,
+    @SerialName("double_hours") val doubleHours: Boolean? = null
 )
 
 /** An FDV event. Whether it's live is worked out from the times, so it stays right while the screen is open. */
@@ -300,7 +304,9 @@ data class FdvEvent(
     val url: String?,
     val registered: Boolean,
     val registeredPilots: Int,
-    val maxPilots: Int?
+    val maxPilots: Int?,
+    val categoryFree: Boolean = false,    // aircraft rank limits don't apply
+    val doubleHours: Boolean = false
 ) {
     fun isLiveAt(now: Long): Boolean = now in startsAtMillis until endsAtMillis
     fun hasEndedAt(now: Long): Boolean = now >= endsAtMillis
@@ -328,7 +334,8 @@ internal data class FleetDto(
     @SerialName("range_nm") val rangeNm: Int? = null,
     @SerialName("min_rank") val minRank: RankDto? = null,     // null = any rank
     @SerialName("can_fly") val canFly: Boolean = true,        // for the signed-in pilot's rank
-    val registrations: Int = 0
+    val registrations: Int = 0,
+    @SerialName("any_rank") val anyRank: Boolean = false       // Wheels Up types: any rank, any time
 )
 
 /** An aircraft type in FDV's fleet, and whether this pilot's rank can fly it. */
@@ -340,5 +347,39 @@ data class FdvFleetType(
     val rangeNm: Int?,
     val minRank: String?,
     val canFly: Boolean,
-    val registrations: Int
+    val registrations: Int,
+    val anyRank: Boolean = false
 )
+
+// ---- /bonuses ----
+
+@Serializable
+internal data class BonusDto(
+    val type: String? = null,             // flight_of_the_day, airport_of_the_month, event, personal, bonus
+    val label: String? = null,
+    val departure: CodeNameDto? = null,
+    val arrival: CodeNameDto? = null,
+    @SerialName("starts_at") val startsAt: String? = null,
+    @SerialName("ends_at") val endsAt: String? = null,
+    @SerialName("category_free") val categoryFree: Boolean = false,
+    @SerialName("double_hours") val doubleHours: Boolean = false,
+    val match: String? = null             // route, either_end, departure, arrival, any
+)
+
+/** How a bonus's airports have to match a flight. */
+enum class BonusMatch { ROUTE, EITHER_END, DEPARTURE, ARRIVAL, ANY }
+
+/** An FDV bonus: Flight of the Day, Airport of the Month, a personal or staff bonus. */
+data class FdvBonus(
+    val type: String,
+    val label: String,
+    val departureIcao: String?,
+    val arrivalIcao: String?,
+    val startsAtMillis: Long,
+    val endsAtMillis: Long,
+    val categoryFree: Boolean,
+    val doubleHours: Boolean,
+    val match: BonusMatch
+) {
+    fun hasEndedAt(now: Long): Boolean = now >= endsAtMillis
+}

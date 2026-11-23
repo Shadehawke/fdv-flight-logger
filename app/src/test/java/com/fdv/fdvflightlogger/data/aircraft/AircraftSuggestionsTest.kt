@@ -7,8 +7,20 @@ import org.junit.Test
 
 class AircraftSuggestionsTest {
 
-    private fun type(icao: String, name: String, canFly: Boolean, minRank: String? = null) =
-        FdvFleetType(icao, name, null, null, null, minRank, canFly, registrations = 1)
+    private fun type(icao: String, name: String, canFly: Boolean, minRank: String? = null, anyRank: Boolean = false) =
+        FdvFleetType(icao, name, null, null, null, minRank, canFly, registrations = 1, anyRank = anyRank)
+
+    @Test
+    fun `any-rank types and waiver passes are described`() {
+        val wheelsUp = mapOf("C172" to type("C172", "Cessna 172", canFly = true, anyRank = true)) + fleet
+        assertTrue(AircraftSuggestions.describe("C172", wheelsUp)!!.endsWith("FDV fleet · any rank"))
+        assertEquals("Airbus A350-900 · rank: Sky Team Captain · would use your waiver pass",
+            AircraftSuggestions.describe("A359", fleet, rankWaivers = 1))
+        assertEquals("Airbus A350-900 · rank: Sky Team Captain · would use 1 of 3 waiver passes",
+            AircraftSuggestions.describe("A359", fleet, rankWaivers = 3))
+        assertEquals("Airbus A350-900 · FDV fleet · rank waived",
+            AircraftSuggestions.describe("A359", fleet, rankWaived = true, rankWaivers = 3))   // a waived flight uses no pass
+    }
 
     private val fleet = listOf(
         type("A321", "Airbus A321", canFly = true),

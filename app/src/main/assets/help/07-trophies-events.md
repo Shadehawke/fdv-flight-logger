@@ -15,6 +15,6 @@ Tap any award or trophy for its description, requirement and date. Turn off **Sh
 <!-- keywords: events, group flight, fly in, register, upcoming, live -->
 Tap the **calendar icon** on the dashboard to see FDV's events, under **Happening now** and **Upcoming**.
 
-Each event shows its route, times in your local time and Zulu, how many pilots are registered, and whether you are. Group Flight, Fly In, Fly Out and In or Out events are marked **CAT Free · double hours**.
+Each event shows its route, times in your local time and Zulu, how many pilots are registered, and whether you are. Events that are CAT Free or earn double hours say so. At the top, **Bonuses** lists FDV's current and upcoming bonuses, such as Flight of the Day and Airport of the Month, with where and when to fly.
 
 You register for events on FDV's website: tap **Register on FDV** or **View on FDV** to open the event's page.

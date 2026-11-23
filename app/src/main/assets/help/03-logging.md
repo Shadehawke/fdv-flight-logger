@@ -64,6 +64,7 @@ The gate is filled in and the terminal is shown. FDV picks a random suitable gat
 Start typing an aircraft code or name, and the app suggests matching types. When you're signed in to FDV, the suggestions also show FDV's fleet:
 
 - **A tick:** in FDV's fleet, and your rank can fly it
+- - **"any rank":** a Wheels Up type you can fly at any rank
 - **A padlock and a rank:** in FDV's fleet, but normally above your rank
 - **Dimmed:** not in FDV's fleet
 
@@ -71,20 +72,36 @@ Types you can fly are listed first. The line under the field repeats what FDV sa
 
 You can still type any aircraft. The marks are information, not limits.
 
-## Event flights: CAT Free and double hours
-<!-- keywords: cat free, category free, double hours, bonus, event flight, group flight, fly in, fly out, rank waived -->
-On FDV, a flight that matches a **Group Flight**, **Fly In**, **Fly Out** or **In or Out** event, flown inside the event's time window, is CAT Free and earns double hours. CAT Free means the aircraft rank limits don't apply.
+## Bonus flights: CAT Free and double hours
+<!-- keywords: cat free, category free, double hours, bonus, event flight, group flight, fly in, fly out, in or out, flight of the day, airport of the month, rank waived -->
+FDV events and bonuses can make a flight **CAT Free**, so aircraft rank limits don't apply, and earn **double hours**. Double-hours flights skip the rank check too.
 
-When the flight you're logging matches such an event, live or starting within two hours, a banner at the top of the flight says so. While it applies, every fleet type shows as flyable, marked "rank waived".
+When the flight you're logging matches one, a banner at the top of the flight shows what it gives and when to fly:
 
-The app matches events by airport:
+- **A tick:** flown now, the flight counts
+- **A clock:** not yet; the banner says when to take off or land
 
-- **Group Flight:** your departure and arrival match the event's
-- **Fly In:** your arrival matches the event's
-- **Fly Out:** your departure matches the event's
-- **In or Out:** either airport matches
+While a banner is showing, every fleet type shows as flyable, marked "rank waived".
 
-This only applies to a new flight being logged now. Other events, and FDV bonuses such as Flight of the Day, aren't detected yet.
+### When a flight counts
+- **Group Flight and Fly Out:** take off from 30 minutes before the start until the end, and land within 2 hours after the end
+- **Fly In:** land during the event, having taken off no more than 4 hours before the start
+- **In or Out:** the Fly Out rule when leaving the event airport, the Fly In rule when arriving
+- **Flight of the Day, Airport of the Month and other bonuses:** be in the air during the bonus: take off before it ends and land after it starts
+
+The app judges this as if you take off now and land after the flight's air time. Enter the air time, or import from SimBrief, for the most accurate result.
+
+### Which airports match
+- An event with both airports needs both to match. One with only a departure or only an arrival needs that end to match. In or Out: either end at the event airport.
+- **Flight of the Day:** that exact route. **Airport of the Month:** into or out of that airport.
+
+This only applies to a new flight being logged now.
+
+## Rank waiver passes
+<!-- keywords: waiver, waiver pass, rank waiver, pass, above my rank -->
+If you have rank waiver passes on FDV, one flight in an aircraft above your rank still auto-approves, and uses up a pass. When you pick such an aircraft, the line under the Aircraft field says a pass would be used and how many you have.
+
+Passes are never used on group flights, CAT Free or double-hours flights, or Wheels Up aircraft.
 
 ## The scratchpad
 <!-- keywords: notes, scratchpad, taxi, clearance -->
