@@ -19,11 +19,11 @@ Restoring merges the backup into your logbook. Flights you already have are skip
 
 ## Exporting to CSV
 <!-- keywords: csv, spreadsheet, excel, google sheets, export -->
-In **Flight History**, tap **⋮** then **Export CSV**. The file has one row per flight with every field, for use in a spreadsheet.
+In **Flight History**, tap **⋮** then **Export CSV**. The file has one row per flight with every field, for use in a spreadsheet. While a search or filter is narrowing **Flight History**, the menu reads **Export CSV (number shown)** and exports just those flights, for example one month's logbook. Clear the search and filters to export everything.
 
 ## Exporting to PDF
 <!-- keywords: pdf, print, logbook pdf, export -->
-In **Flight History**, tap **⋮** then **Export PDF** for a printable logbook with one line per flight.
+In **Flight History**, tap **⋮** then **Export PDF** for a printable logbook with one line per flight. It follows a search or filter the same way as CSV.
 
 ## Sharing an export
 <!-- keywords: share, send, email -->

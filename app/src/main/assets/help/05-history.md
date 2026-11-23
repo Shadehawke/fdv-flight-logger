@@ -8,6 +8,19 @@ In **Flight History**, type in the search box to find flights by airport, airlin
 
 The sort button switches between newest first and oldest first.
 
+## Filtering your history
+<!-- keywords: filter, filters, date range, last 30 days, airline, aircraft, flight type, pending, rejected, not on fdv, clear -->
+The chips under the search box narrow the list:
+
+- **Date:** the last 7, 30 or 90 days, this year, or a custom range from the calendar
+- **Airline** and **Aircraft:** every value in your logbook, most-flown first, with a count
+- **Type:** online or offline
+- **FDV status:** approved, pending, rejected, or never filed on FDV
+
+Pick as many values in one filter as you like: Airline DAL and AFR shows both. Different filters narrow each other: DAL, A321 and the last 30 days shows only flights that are all three. The search box applies on top.
+
+Tap **Clear** to remove every filter. The line above the list shows how many flights match out of your whole logbook.
+
 ## Flight details
 <!-- keywords: detail, view flight, open flight -->
 Tap a flight to see everything recorded for it, section by section. If it's linked to FDV, the PIREP number and its review status are shown at the top. Flights with a landing rate show its rating, such as Smooth, here and in the history list.

@@ -313,10 +313,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun exportAllFlightsToCsv(context: Context, uri: Uri) {
+    /** [ids] null exports the whole logbook; otherwise just those flights (what History is showing). */
+    fun exportAllFlightsToCsv(context: Context, uri: Uri, ids: Set<Long>? = null) {
         viewModelScope.launch {
             try {
-                val flights = flightRepo.getAll()
+                val flights = flightRepo.getAll().let { all -> if (ids == null) all else all.filter { it.id in ids } }
                 val csv = ExportCsv.buildCsv(flights)
 
                 withContext(Dispatchers.IO) {
@@ -333,10 +334,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-    fun exportAllFlightsToPdf(context: Context, uri: Uri) {
+    /** [ids] null exports the whole logbook; otherwise just those flights (what History is showing). */
+    fun exportAllFlightsToPdf(context: Context, uri: Uri, ids: Set<Long>? = null) {
         viewModelScope.launch {
             try {
-                val flights = flightRepo.getAll()
+                val flights = flightRepo.getAll().let { all -> if (ids == null) all else all.filter { it.id in ids } }
 
                 val header = ExportPdf.HeaderInfo(
                     pilotId = state.value.profile.pilotId,

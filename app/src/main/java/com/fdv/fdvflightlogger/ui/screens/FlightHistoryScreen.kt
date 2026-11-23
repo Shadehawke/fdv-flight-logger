@@ -74,6 +74,9 @@ import com.fdv.fdvflightlogger.data.db.pirepStatus
 import com.fdv.fdvflightlogger.ui.components.PirepStatusBadge
 import com.fdv.fdvflightlogger.data.stats.LandingRating
 import com.fdv.fdvflightlogger.ui.components.LandingRatingBadge
+import androidx.compose.material3.TextButton
+import com.fdv.fdvflightlogger.data.history.HistoryFilter
+
 
 private enum class SortMode { NEWEST_FIRST, OLDEST_FIRST }
 
@@ -95,18 +98,38 @@ fun FlightHistoryScreen(
     // Search + sort are UI state, and should survive rotation/process recreation when possible
     var query by rememberSaveable { mutableStateOf("") }
     val sortMode = rememberSaveable { mutableStateOf(SortMode.NEWEST_FIRST) }
+    var filter by rememberSaveable(stateSaver = HistoryFilterSaver) { mutableStateOf(HistoryFilter()) }
+    // Search, then filters, then sort; only recalculated when one of them (or the logbook) changes
+    val normalizedQuery = query.trim().lowercase()
+    val today = LocalDate.now()
+    val filteredFlights = remember(flights, normalizedQuery, filter, sortMode.value, today) {
+        val zone = ZoneId.systemDefault()
+        flights.asSequence()
+            .filter { normalizedQuery.isBlank() || it.matches(normalizedQuery) }
+            .filter { filter.matches(it, today, zone) }
+            .toList()
+            .let { list ->
+                when (sortMode.value) {
+                    SortMode.NEWEST_FIRST -> list.sortedByDescending { it.createdAtEpochMs }
+                    SortMode.OLDEST_FIRST -> list.sortedBy { it.createdAtEpochMs }
+                }
+            }
+    }
+    // Whether the list shows less than the whole logbook: exports then follow what's shown
+    val narrowed = normalizedQuery.isNotBlank() || filter.isActive
+    val shownIds = if (narrowed) filteredFlights.map { it.id }.toSet() else null
 
     val createCsvLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv"),
         onResult = { uri ->
-            if (uri != null) appViewModel.exportAllFlightsToCsv(context, uri)
+            if (uri != null) appViewModel.exportAllFlightsToCsv(context, uri, shownIds)
         }
     )
 
     val createPdfLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/pdf"),
         onResult = { uri ->
-            if (uri != null) appViewModel.exportAllFlightsToPdf(context, uri)
+            if (uri != null) appViewModel.exportAllFlightsToPdf(context, uri, shownIds)
         }
     )
 
@@ -158,22 +181,6 @@ fun FlightHistoryScreen(
         }
     }
 
-    // Filter + sort (kept simple and fast)
-    val normalizedQuery = query.trim().lowercase()
-
-    val filteredFlights = flights
-        .asSequence()
-        .filter { f ->
-            if (normalizedQuery.isBlank()) true else f.matches(normalizedQuery)
-        }
-        .toList()
-        .let { list ->
-            when (sortMode.value) {
-                SortMode.NEWEST_FIRST -> list.sortedByDescending { it.createdAtEpochMs }
-                SortMode.OLDEST_FIRST -> list.sortedBy { it.createdAtEpochMs }
-            }
-        }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -209,14 +216,14 @@ fun FlightHistoryScreen(
                         onDismissRequest = { menuOpen.value = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Export CSV") },
+                            text = { Text(if (shownIds != null) "Export CSV (${shownIds.size} shown)" else "Export CSV") },
                             onClick = {
                                 menuOpen.value = false
                                 createCsvLauncher.launch("fdv_flights.csv")
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Export PDF") },
+                            text = { Text(if (shownIds != null) "Export PDF (${shownIds.size} shown)" else "Export PDF") },
                             onClick = {
                                 menuOpen.value = false
                                 createPdfLauncher.launch("fdv_flights.pdf")
@@ -268,13 +275,18 @@ fun FlightHistoryScreen(
                     .inset(raisedColors())
             )
 
+            HistoryFilterBar(filter = filter, flights = flights, onChange = { filter = it })
+
+            Spacer(Modifier.height(8.dp))
+
             val sortLabel = when (sortMode.value) {
                 SortMode.NEWEST_FIRST -> "Newest first"
                 SortMode.OLDEST_FIRST -> "Oldest first"
             }
 
             Text(
-                text = "${filteredFlights.size} flights • $sortLabel",
+                text = if (narrowed) "${filteredFlights.size} of ${flights.size} flights • $sortLabel"
+                else "${flights.size} flights • $sortLabel",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp)
@@ -296,16 +308,27 @@ fun FlightHistoryScreen(
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = if (query.isNotBlank()) {
-                                    "No flights match \"$query\""
-                                } else {
-                                    "No flights logged yet.\nCreate your first flight!"
-                                },
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
+                            if (narrowed) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "No flights match your search and filters.",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    TextButton(onClick = {
+                                        query = ""
+                                        filter = HistoryFilter()
+                                    }) { Text("Clear search and filters") }
+                                }
+                            } else {
+                                Text(
+                                    text = "No flights logged yet.\nCreate your first flight!",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 } else {
