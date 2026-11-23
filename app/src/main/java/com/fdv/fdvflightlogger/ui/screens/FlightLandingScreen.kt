@@ -86,6 +86,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
+import com.fdv.fdvflightlogger.ui.components.LandingCard
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -223,6 +224,11 @@ fun FlightLandingScreen(
                     )
                 } else {
                     SummaryRow(stats)
+
+                    LandingCard(
+                        stats = stats.landing,
+                        onOpenFlight = { id -> navController.navigate("detail/$id") }
+                    )
 
                     if (wide) {
                         Row(

@@ -39,6 +39,29 @@ Your last flight always shows your most recent flight, even while it's pending.
 
 > Your FDV Hours on the pilot card can still differ from the Block Hours gauge. FDV adds bonus and transfer hours, and only counts flights you filed with FDV.
 
+## Landing stats
+<!-- keywords: landing rate, fpm, touchdown, butter, smooth, firm, hard, floated, landings, best landing -->
+When your flights have landing rates, synced from FDV or typed in the Aircraft + Performance section, the **Landings** card shows:
+
+- your **average touchdown** and its rating
+- how your **last 10** landings compare with your average
+- how your landings spread across the ratings
+- your **best landing**, the softest one that didn't float: tap it to open the flight
+- your **average by aircraft type**, for types with at least 3 landings
+
+Ratings follow common airline guidance, where 100 to 250 fpm is the normal target:
+
+- **Floated:** under 60 fpm. Very soft touchdowns usually mean the aircraft was held off too long and landed past the touchdown zone.
+- **Butter:** 60 to 100 fpm
+- **Smooth:** 101 to 250 fpm
+- **Firm:** 251 to 400 fpm. Often deliberate in crosswinds, gusts or on a wet runway.
+- **Hard:** 401 to 600 fpm
+- **Very hard:** over 600 fpm, where a real aircraft would be inspected for a hard landing
+
+> Touching down on the centreline in the touchdown zone, at the right speed, matters more than the lowest number.
+
+Every flight with a landing rate counts here, including pending and rejected ones: the landing still happened.
+
 ## Event card
 <!-- keywords: events, live, next event -->
 When an FDV event is live, the dashboard shows it with a LIVE badge and when it ends. When nothing is live, it shows the next event and when it starts. A tick means you're registered.

@@ -4,13 +4,13 @@ Find, review and reuse the flights in your logbook.
 
 ## Searching and sorting
 <!-- keywords: search, find, filter, sort, newest, oldest -->
-In **Flight History**, type in the search box to find flights by airport, airline, flight number (including DAL numbers), aircraft, route, procedures, notes or FDV status.
+In **Flight History**, type in the search box to find flights by airport, airline, flight number (including DAL numbers), aircraft, route, procedures, notes, FDV status or landing rating, such as "butter".
 
 The sort button switches between newest first and oldest first.
 
 ## Flight details
 <!-- keywords: detail, view flight, open flight -->
-Tap a flight to see everything recorded for it, section by section. If it's linked to FDV, the PIREP number and its review status are shown at the top.
+Tap a flight to see everything recorded for it, section by section. If it's linked to FDV, the PIREP number and its review status are shown at the top. Flights with a landing rate show its rating, such as Smooth, here and in the history list.
 
 ## Return leg and duplicate
 <!-- keywords: return leg, reverse, duplicate, copy, same flight again -->

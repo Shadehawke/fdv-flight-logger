@@ -52,7 +52,8 @@ object StatsCalculator {
             // The most recent flight, counted or not: a just-filed flight is still your last flight
             lastFlight = flights.maxByOrNull { it.createdAtEpochMs },
             pendingFlights = flights.count { it.pirepStatus == PirepStatus.PENDING },
-            rejectedFlights = flights.count { it.pirepStatus == PirepStatus.REJECTED }
+            rejectedFlights = flights.count { it.pirepStatus == PirepStatus.REJECTED },
+            landing = LandingStatsCalculator.compute(flights)
         )
     }
 

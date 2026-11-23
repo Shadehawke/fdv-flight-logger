@@ -25,7 +25,9 @@ data class FlightStats(
     val lastFlight: FlightLogEntity? = null,
     // Left out of everything above because FDV doesn't count them either
     val pendingFlights: Int = 0,
-    val rejectedFlights: Int = 0
+    val rejectedFlights: Int = 0,
+    // Every flight with a landing rate, pending and rejected included: the landing still happened
+    val landing: LandingStats = LandingStats()
 ) {
     val blockHours: Double get() = blockMinutes / 60.0
 

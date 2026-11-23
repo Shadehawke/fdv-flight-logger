@@ -72,6 +72,8 @@ import java.time.format.DateTimeFormatter
 import com.fdv.fdvflightlogger.data.db.PirepStatus
 import com.fdv.fdvflightlogger.data.db.pirepStatus
 import com.fdv.fdvflightlogger.ui.components.PirepStatusBadge
+import com.fdv.fdvflightlogger.data.stats.LandingRating
+import com.fdv.fdvflightlogger.ui.components.LandingRatingBadge
 
 private enum class SortMode { NEWEST_FIRST, OLDEST_FIRST }
 
@@ -344,6 +346,7 @@ private fun FlightHistoryCard(
             ) {
                 // Approved is the normal case; only flights that need attention get a badge
                 f.pirepStatus?.takeIf { it != PirepStatus.APPROVED }?.let { PirepStatusBadge(it) }
+                LandingRating.of(f.landingRateFpm)?.let { LandingRatingBadge(it) }
                 Text(
                     text = formatDate(f.createdAtEpochMs),
                     style = MaterialTheme.typography.bodySmall,
@@ -406,7 +409,8 @@ private fun FlightLogEntity.matches(q: String): Boolean {
             sid.m() ||
             star.m() ||
             altn.m() ||
-            fdvStatus.m()      // "pending" or "rejected" finds those flights
+            fdvStatus.m()  ||    // "pending" or "rejected" finds those flights
+            LandingRating.of(landingRateFpm)?.label.m()     // "butter", "floated" or "hard" finds those landings
 }
 
 private fun formatDate(epochMs: Long): String =

@@ -60,6 +60,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.fdv.fdvflightlogger.data.db.pirepStatus
 import com.fdv.fdvflightlogger.ui.components.PirepStatusBadge
+import com.fdv.fdvflightlogger.data.stats.LandingRating
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -320,7 +321,7 @@ private fun FlightDetailContent(
             ReadRow("Fuel", flight.fuel.orEmpty(), "PAX", flight.pax.orEmpty(), "Payload", flight.payload.orEmpty())
             ReadRow("B. Time", formatStoredTime(flight.blockTime), "A. Time", formatStoredTime(flight.airTime), "CI", flight.costIndex.orEmpty())
             ReadRow("R. Fuel", flight.reserveFuel.orEmpty(), "ZFW", flight.zfw.orEmpty(), "", "")
-            ReadRow("Fuel Used", flight.fuelUsed.orEmpty(), "Landing", flight.landingRateFpm?.let { "$it fpm" }.orEmpty(), "", "")
+            ReadRow("Fuel Used", flight.fuelUsed.orEmpty(), "Landing", flight.landingRateFpm?.let { fpm -> listOfNotNull("$fpm fpm", LandingRating.of(fpm)?.label).joinToString(" · ") }.orEmpty(), "", "")
             ReadRow("Crz. Wind", formatStoredWind(flight.crzWind), "Crz. OAT", flight.crzOat.orEmpty(), "", "")
         }
 
