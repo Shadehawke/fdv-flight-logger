@@ -57,6 +57,7 @@ Every flight with a landing rate gets a rating, based on airline guidance (100�
 - **Filters:** date (presets or a custom range), airline, aircraft, flight type and FDV status
 - **CSV and PDF export** with a Share shortcut. Exports follow your search and filters, so you can export one month's flights.
 - **Back up and restore** the whole logbook (and your profile photo) as versioned JSON. Restoring merges and skips flights you already have.
+- **Route map:** your flights as great-circle routes on a world map, with the same filters, offline
 ### App
 - **Built-in help:** searchable, in sections, and available offline (Settings → ?)
 - **In-app updates:** checks GitHub Releases daily, then downloads, verifies and installs updates in the app (you confirm each install)
@@ -185,6 +186,7 @@ The in-app help is one Markdown file per section in `app/src/main/assets/help/`,
 app/src/main/
 ├── assets/
 │   ├── airports.json             # Trimmed airport, runway and coordinate data
+    ├── world.bin                 # World coastlines and borders for the route map
 │   └── help/                     # Built-in help, one Markdown file per section
 └── java/com/fdv/fdvflightlogger/
     ├── data/
@@ -197,6 +199,7 @@ app/src/main/
     │   ├── fdv/                  # FDV API client, models, event and bonus rules
     │   ├── help/                 # Help parser and search
     │   ├── history/              # Learned suggestions and History filters
+    │   ├── map/                  # World outline, route network, great circles
     │   ├── network/              # Shared HTTP client and JSON settings
     │   ├── prefs/                # DataStore profile + settings
     │   ├── profile/              # Profile photo storage
@@ -210,10 +213,11 @@ app/src/main/
         ├── mappers/              # Entity/draft and SimBrief mapping
         ├── nav/                  # Routes and nav graph
         ├── screens/              # Dashboard, Log, History (+ filters), Detail, Setup, Settings,
-        │                         # Trophy Case, Events, Help, Splash
+        │                         # Trophy Case, Events, Help, Splash, Route Map
         └── theme/                # Colors, typography, raised/inset surfaces
 tools/
-└── prepare_airports.py           # Builds airports.json from OurAirports CSVs
+  ├── prepare_airports.py           # Builds airports.json from OurAirports CSVs
+  └── prepare_world.py              # Builds world.bin from Natural Earth outlines
 ```
  
 ---
@@ -232,8 +236,8 @@ Done:
 - [x] FDV bonuses, CAT Free and double-hours rules, rank waiver passes
 - [x] Landing stats and ratings
 - [x] History filters (date, airline, aircraft, type, FDV status)
-  Next:
-- [ ] Route map
+- [x] Route map
+- [ ] Your ideas: open an issue
 ---
 
 ## 🙏 Data Sources
@@ -242,6 +246,7 @@ Done:
 - Flight plan import uses the [SimBrief](https://www.simbrief.com/) API.
 - FDV data comes from FlyDelta Virtual's pilot API.
 - Landing rating bands follow common airline and simulator guidance, including [SKYbrary's hard-landing article](https://skybrary.aero/articles/hard-landing).
+- World coastlines and borders from [Natural Earth](https://www.naturalearthdata.com/), public domain.
 ---
 
 ## ⚠️ Disclaimer

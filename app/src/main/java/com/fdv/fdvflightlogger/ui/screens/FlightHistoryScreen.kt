@@ -76,6 +76,8 @@ import com.fdv.fdvflightlogger.data.stats.LandingRating
 import com.fdv.fdvflightlogger.ui.components.LandingRatingBadge
 import androidx.compose.material3.TextButton
 import com.fdv.fdvflightlogger.data.history.HistoryFilter
+import androidx.compose.material.icons.filled.Public
+import com.fdv.fdvflightlogger.ui.nav.Routes
 
 
 private enum class SortMode { NEWEST_FIRST, OLDEST_FIRST }
@@ -195,6 +197,9 @@ fun FlightHistoryScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { navController.navigate(Routes.routeMap(filter)) }) {
+                        Icon(Icons.Filled.Public, contentDescription = "Route map")
+                    }
                     IconButton(onClick = {
                         sortMode.value = when (sortMode.value) {
                             SortMode.NEWEST_FIRST -> SortMode.OLDEST_FIRST

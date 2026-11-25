@@ -22,6 +22,7 @@ import com.fdv.fdvflightlogger.ui.screens.SettingsScreen
 import com.fdv.fdvflightlogger.ui.screens.SetupScreen
 import com.fdv.fdvflightlogger.ui.screens.SplashScreen
 import com.fdv.fdvflightlogger.ui.screens.TrophyCaseScreen
+import com.fdv.fdvflightlogger.ui.screens.RouteMapScreen
 
 @Composable
 fun AppNavHost(
@@ -134,6 +135,21 @@ fun AppNavHost(
 
         composable(Routes.EVENTS) {
             EventsScreen(appViewModel = appViewModel, navController = navController)
+        }
+
+        composable(
+            route = Routes.ROUTE_MAP,
+            arguments = listOf(navArgument("filter") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { backStackEntry ->
+            RouteMapScreen(
+                appViewModel = appViewModel,
+                navController = navController,
+                initialFilterJson = backStackEntry.arguments?.getString("filter")
+            )
         }
 
         composable(Routes.HELP) {

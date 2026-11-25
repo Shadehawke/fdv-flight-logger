@@ -2,6 +2,8 @@ package com.fdv.fdvflightlogger.ui.nav
 
 import com.fdv.fdvflightlogger.ui.mappers.FlightTemplate
 import android.net.Uri
+import com.fdv.fdvflightlogger.data.history.HistoryFilter
+import kotlinx.serialization.json.Json
 
 object Routes {
     const val SETUP = "setup"
@@ -13,6 +15,12 @@ object Routes {
     const val LOG_FROM = "log/from/{id}/{template}"
     const val TROPHIES = "trophies"
     const val EVENTS = "events"
+    const val ROUTE_MAP = "map?filter={filter}"
+
+    /** The route map, starting with [filter] when one is set (so History can open "these flights"). */
+    fun routeMap(filter: HistoryFilter? = null): String =
+        if (filter == null || !filter.isActive) "map"
+        else "map?filter=${Uri.encode(Json.encodeToString(HistoryFilter.serializer(), filter))}"
     const val HELP = "help"
     const val HELP_SECTION = "help/{section}"
     const val HELP_TOPIC = "help/{section}/{topic}?q={q}"

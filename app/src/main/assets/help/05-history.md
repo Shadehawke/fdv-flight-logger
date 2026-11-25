@@ -35,3 +35,15 @@ From a flight's detail page:
 ## Editing and deleting
 <!-- keywords: edit, change, delete, remove flight -->
 From a flight's detail page, tap **Edit** to change it, or **Delete** to remove it. Deleting can't be undone, so the app asks first.
+
+## Route map
+<!-- keywords: map, route map, routes, world, network, airports, great circle, zoom -->
+The route map draws your flights as lines across the world, along the curved shortest path an aircraft really flies. Busier routes are thicker and brighter, airports are sized by how often you've been there, and your hub is ringed.
+
+- **Pinch** to zoom, **drag** to move, **double-tap** to zoom in. The map wraps sideways like a globe.
+- **Fit** (top right) shows all your routes again.
+- **Tap an airport** to see how often you've been there and your top routes from it.
+
+The filters work here too. Open the map from **Flight History** (the globe icon) and it starts with the same filters, so you can map one month's flying or one aircraft. It's also linked from **Your logbook** on the dashboard.
+
+The map is built into the app and works offline. A flight is left off the map if one of its airports isn't in the app's airport list; the line above the map says how many.
