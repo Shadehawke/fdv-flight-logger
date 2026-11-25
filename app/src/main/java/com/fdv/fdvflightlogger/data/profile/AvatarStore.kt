@@ -17,6 +17,8 @@ object AvatarStore {
     private const val FILE_NAME = "avatar.jpg"
     private const val SIZE_PX = 256      // plenty for a 56 dp circle on any screen
     private const val JPEG_QUALITY = 88
+    // Photos this app saves are 256 px; anything far larger didn't come from one of its backups
+    private const val MAX_RESTORE_PX = SIZE_PX * 4
 
     private fun file(context: Context) = File(context.filesDir, FILE_NAME)
 
@@ -51,8 +53,14 @@ object AvatarStore {
         file(context).takeIf { it.exists() }?.readBytes()
     }
 
-    /** Saves a photo from a backup; null if the bytes aren't a readable image. */
+    /** Saves a photo from a backup; null if the bytes aren't a readable image of a sensible size. */
     suspend fun restore(context: Context, jpeg: ByteArray): Bitmap? = withContext(Dispatchers.IO) {
+        // Read only the dimensions first: a tiny file can claim to be enormous, and decoding
+        // it in full would run out of memory, on every launch once saved
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, bounds)
+        if (bounds.outWidth !in 1..MAX_RESTORE_PX || bounds.outHeight !in 1..MAX_RESTORE_PX) return@withContext null
+
         val bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: return@withContext null
         writeAtomically(context, jpeg)
         bitmap

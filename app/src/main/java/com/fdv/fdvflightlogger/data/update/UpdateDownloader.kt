@@ -26,7 +26,9 @@ internal object UpdateDownloader {
         withContext(Dispatchers.IO) {
             val url = release.apkUrl ?: throw UpdateException("This release has no APK attached yet.")
             val dir = File(context.cacheDir, DIR).apply { mkdirs() }
-            val target = File(dir, "fdv-flight-logger-${release.version}.apk")
+            // The version comes from a release tag: keep only characters that are safe in a file name
+            val safeVersion = release.version.replace(Regex("[^0-9A-Za-z._-]"), "_")
+            val target = File(dir, "fdv-flight-logger-$safeVersion.apk")
 
             // APKs for other versions are never needed again
             dir.listFiles()?.filter { it != target }?.forEach { it.delete() }

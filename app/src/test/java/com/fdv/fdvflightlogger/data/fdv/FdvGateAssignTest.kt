@@ -45,4 +45,9 @@ class FdvGateAssignTest {
             FdvApi.gateAssignPath("KJFK", "Delta Air Lines", "Airbus A321neo")
         )
     }
+
+    @Test
+    fun `a bad airport code never reaches the URL`() {
+        assertThrows(FdvApiException::class.java) { FdvApi.gateAssignPath("../me", "DAL", null) }
+    }
 }

@@ -63,6 +63,7 @@ Every flight with a landing rate gets a rating, based on airline guidance (100â€
 - **In-app updates:** checks GitHub Releases daily, then downloads, verifies and installs updates in the app (you confirm each install)
 - Profile photo, animated splash, branded title bars, and FDV, Light and Dark themes
 - Layouts for phones, foldables (including cover screens) and tablets
+- **Feedback:** report a problem or suggest an idea from Settings or Help
 ---
 
 ## ðŸ“± Requirements
@@ -70,6 +71,7 @@ Every flight with a landing rate gets a rating, based on airline guidance (100â€
 - **Android 12 (API 31) or newer**
 - Designed for tablets and fully usable on phones and foldables
 - Internet only for FDV features, SimBrief import and update checks
+- iOS isn't available yet; it's planned for the future
 ---
 
 ## ðŸ“¥ Installing
@@ -94,6 +96,7 @@ It talks to exactly these services, and only for the features listed:
 | `flydeltavirtual.com` | Signed in to FDV | Your FDV sign-in token. It reads your profile, bookings, PIREPs, awards, events, bonuses, fleet and gates. Read-only: the app never files or changes anything on FDV. |
 | `simbrief.com` | You tap **Import** | Your SimBrief / Navigraph alias |
 | `api.github.com`, `github.com` | Once a day, and when you download an update | Nothing about you: a request for the latest release |
+| `docs.google.com` | You tap **Report a problem** or **Suggest an idea** | Only what you type into the form, plus the app version and device model it fills in for you (you can change both before submitting) |
 
 - Your FDV sign-in token is encrypted with a key held in the Android Keystore, is excluded from device backups, and is deleted when you sign out. Tokens expire after 30 days.
 - Sign-in uses PKCE in the system browser, so your FDV password never passes through the app.

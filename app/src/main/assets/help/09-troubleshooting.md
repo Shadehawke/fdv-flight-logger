@@ -2,6 +2,12 @@
 
 What to do when something doesn't work.
 
+## Reporting a problem or suggesting an idea
+<!-- keywords: feedback, bug, report, suggestion, idea, contact, support, form, screenshot -->
+In **Settings** (or at the bottom of Help), tap **Report a problem** or **Suggest an idea**. A short form opens in your browser with your app version and device model already filled in, so we know what you're using. Nothing is sent until you submit it, and you don't need to sign in.
+
+For a problem, say what you were doing, what happened, and what you expected. If a screenshot would help, paste a link to it (for example from Discord or Google Drive), and leave your Discord name or email if you'd like a reply.
+
 ## Sign-in problems
 <!-- keywords: sign in failed, login failed, expired, didn't match, no account, vatsim mismatch -->
 - **"That sign-in has expired"** or **"didn't match this request":** the sign-in took too long, or the app restarted part-way. Tap **Sign in with FDV** again.

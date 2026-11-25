@@ -315,10 +315,13 @@ object FdvApi {
      * Delta, and an aircraft that isn't a type code is left out, so neither turns into a 422.
      */
     internal fun gateAssignPath(icao: String, airline: String?, aircraft: String?): String {
+        // The airport becomes part of the URL path: letters and digits only, exactly four
+        val airport = icao.trim().uppercase().takeIf { AIRPORT_CODE.matches(it) }
+            ?: throw FdvApiException("That isn't an ICAO airport code.")
         val carrier = airline?.trim()?.uppercase()?.takeIf { AIRLINE_CODE.matches(it) } ?: "DAL"
         val type = aircraft?.trim()?.uppercase()?.takeIf { AIRCRAFT_CODE.matches(it) }
         return buildString {
-            append("/airports/").append(icao.trim().uppercase()).append("/gates/assign")
+            append("/airports/").append(airport).append("/gates/assign")
             append("?airline=").append(carrier)
             if (type != null) append("&aircraft=").append(type)
         }
@@ -366,6 +369,7 @@ object FdvApi {
     }
 
     private val AIRLINE_CODE = Regex("[A-Z]{3}")
+    private val AIRPORT_CODE = Regex("[A-Z0-9]{4}")
     private val AIRCRAFT_CODE = Regex("[A-Z0-9]{2,4}")
 
     private fun isoMillis(raw: String): Long? = try {

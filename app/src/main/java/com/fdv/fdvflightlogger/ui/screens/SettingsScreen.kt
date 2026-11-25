@@ -58,6 +58,7 @@ import com.fdv.fdvflightlogger.ui.components.FdvAccountCard
 import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.nav.Routes
 import com.fdv.fdvflightlogger.ui.components.rememberStartUpdate
+import com.fdv.fdvflightlogger.ui.components.FeedbackButtons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -336,6 +337,16 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            HorizontalDivider()
+            Text("Feedback", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Opens a short Google Form. Your app version and device model are filled in for you, " +
+                        "and nothing is sent until you submit it.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            FeedbackButtons()
         }
     }
 }

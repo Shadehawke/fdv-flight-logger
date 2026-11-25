@@ -65,6 +65,7 @@ import com.fdv.fdvflightlogger.data.help.HelpSearch
 import com.fdv.fdvflightlogger.data.help.HelpSection
 import com.fdv.fdvflightlogger.data.help.HelpTopic
 import com.fdv.fdvflightlogger.ui.components.FdvTopBar
+import com.fdv.fdvflightlogger.ui.components.FeedbackButtons
 import com.fdv.fdvflightlogger.ui.components.HelpBody
 import com.fdv.fdvflightlogger.ui.components.highlighted
 import com.fdv.fdvflightlogger.ui.nav.Routes
@@ -122,8 +123,19 @@ fun HelpScreen(navController: NavController) {
                 sections == null -> item(key = "loading") {
                     CircularProgressIndicator(modifier = Modifier.padding(32.dp))
                 }
-                query.isBlank() -> items(sections, key = { it.id }) { section ->
-                    SectionCard(section, onClick = { navController.navigate(Routes.helpSection(section.id)) })
+                query.isBlank() -> {
+                    items(sections, key = { it.id }) { section ->
+                        SectionCard(section, onClick = { navController.navigate(Routes.helpSection(section.id)) })
+                    }
+                    item(key = "feedback") {
+                        Column(modifier = Modifier.widthIn(max = MaxWidth).fillMaxWidth().padding(top = 8.dp)) {
+                            Text(
+                                text = "Didn't find your answer?",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            FeedbackButtons()
+                        }
+                    }
                 }
                 results.isEmpty() -> item(key = "none") {
                     Text(
