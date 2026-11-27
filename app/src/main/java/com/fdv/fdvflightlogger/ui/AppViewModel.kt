@@ -185,6 +185,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // Non-null while an import or sync runs; the text is shown on the account card
     private val _historyProgress = MutableStateFlow<String?>(null)
     val historyProgress: StateFlow<String?> = _historyProgress.asStateFlow()
+
+    // The history import offered after signing in; null when there's nothing to show
+    private val _importOffer = MutableStateFlow<ImportOffer?>(null)
+    val importOffer: StateFlow<ImportOffer?> = _importOffer.asStateFlow()
+
     // Non-null while the background air-time fill is queued or running; shown on the account card
     val airTimeFill: StateFlow<String?> = WorkManager.getInstance(getApplication())
         .getWorkInfosForUniqueWorkFlow(AirTimeFillWorker.NAME)
@@ -491,6 +496,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         val signedIn = FdvAuthClient.exchangeCode(result.code, verifier)
                         sessionStore.save(signedIn)
                         _events.tryEmit(UiEvent.Message("Signed in to FDV as ${signedIn.callsign ?: "pilot"}"))
+                        // A logbook that has never imported FDV history: offer to bring the pilot's flights in
+                        if (repo.fdvSyncFlow.first().mode == null) _importOffer.value = ImportOffer.Asking
                         refreshFdvProfile(quiet = true)
                     } catch (e: FdvAuthException) {
                         _events.tryEmit(UiEvent.ExportError(e.message ?: "FDV sign-in failed"))
@@ -512,6 +519,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             // Clear locally first, so signing out works even with no connection
             sessionStore.clear()
             _fdvPilot.value = null
+            _importOffer.value = null
             _awards.value = null
             _fdvEvents.value = null
             _fdvBonuses.value = null
@@ -747,12 +755,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Reads the whole FDV logbook and works out what an import would do. Nothing is written yet. */
-    fun previewHistoryImport(onReady: (ImportPlan) -> Unit) {
+    fun previewHistoryImport(onFailed: () -> Unit = {}, onReady: (ImportPlan) -> Unit) {
         if (_historyProgress.value != null) return
         viewModelScope.launch {
             _historyProgress.value = "Reading your FDV logbook…"
             try {
-                val pireps = fdvCall { token -> fetchAllPireps(token, afterId = null) } ?: return@launch
+                val pireps = fdvCall { token -> fetchAllPireps(token, afterId = null) } ?: run {
+                    onFailed()   // fdvCall has already shown the error
+                    return@launch
+                }
                 val plan = withContext(Dispatchers.Default) { HistoryImport.plan(flightRepo.getAll(), pireps) }
                 onReady(plan)
             } finally {
@@ -779,6 +790,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _historyProgress.value = null
             }
         }
+    }
+
+    fun acceptImportOffer() {
+        if (_historyProgress.value != null) return
+        _importOffer.value = ImportOffer.Reading
+        previewHistoryImport(
+            onFailed = { _importOffer.value = null }
+        ) { plan ->
+            // Only if the pilot is still waiting; after Hide, the plan is dropped
+            if (_importOffer.value == ImportOffer.Reading) _importOffer.value = ImportOffer.Ready(plan)
+        }
+    }
+
+    fun applyImportOffer(plan: ImportPlan, mode: FdvImportMode) {
+        _importOffer.value = null
+        applyHistoryImport(plan, mode)
+    }
+
+    fun dismissImportOffer() {
+        _importOffer.value = null
     }
 
     fun syncNewPireps() {

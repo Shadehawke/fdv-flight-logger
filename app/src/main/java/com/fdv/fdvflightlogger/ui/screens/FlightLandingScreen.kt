@@ -90,6 +90,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import com.fdv.fdvflightlogger.ui.components.LandingCard
 import com.fdv.fdvflightlogger.ui.components.rememberStartUpdate
+import com.fdv.fdvflightlogger.ui.components.HistoryImportOffer
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -113,6 +114,8 @@ fun FlightLandingScreen(
             appViewModel.syncFdvQuietly()
         }
     }
+    // A sign-in during setup offers the history import here, once setup has the fuel unit
+    HistoryImportOffer(appViewModel)
     var showReleaseNotes by remember { mutableStateOf(false) }
     val context = LocalContext.current
 

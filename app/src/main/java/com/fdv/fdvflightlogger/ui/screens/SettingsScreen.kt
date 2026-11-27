@@ -47,7 +47,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.fdv.fdvflightlogger.data.prefs.FdvImportMode
 import com.fdv.fdvflightlogger.data.prefs.QnhUnit
 import com.fdv.fdvflightlogger.data.prefs.TempUnit
 import com.fdv.fdvflightlogger.data.prefs.ThemeMode
@@ -59,6 +58,8 @@ import com.fdv.fdvflightlogger.ui.components.FdvTopBar
 import com.fdv.fdvflightlogger.ui.nav.Routes
 import com.fdv.fdvflightlogger.ui.components.rememberStartUpdate
 import com.fdv.fdvflightlogger.ui.components.FeedbackButtons
+import com.fdv.fdvflightlogger.ui.components.HistoryImportOffer
+import com.fdv.fdvflightlogger.ui.components.ImportPlanDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,40 +147,18 @@ fun SettingsScreen(
             )
 
             importPlan?.let { plan ->
-                AlertDialog(
-                    onDismissRequest = { importPlan = null },
-                    title = { Text("Import your FDV history?") },
-                    text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("${plan.total} PIREPs found on FDV.")
-                            Text("${plan.matched.size} match flights in your logbook and will get their actuals.")
-                            if (plan.alreadyLinked > 0) Text("${plan.alreadyLinked} are already synced.")
-                            Text("${plan.unmatched.size} have no matching flight.")
-                            Text(
-                                "Import all adds those as new flights. Only my flights leaves them out. " +
-                                        "Either way, new PIREPs follow the same choice when you sync.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            importPlan = null
-                            appViewModel.applyHistoryImport(plan, FdvImportMode.ALL)
-                        }) { Text("Import all") }
-                    },
-                    dismissButton = {
-                        Row {
-                            TextButton(onClick = { importPlan = null }) { Text("Cancel") }
-                            TextButton(onClick = {
-                                importPlan = null
-                                appViewModel.applyHistoryImport(plan, FdvImportMode.MATCH_ONLY)
-                            }) { Text("Only my flights") }
-                        }
+                ImportPlanDialog(
+                    plan = plan,
+                    onDismiss = { importPlan = null },
+                    onImport = { mode ->
+                        importPlan = null
+                        appViewModel.applyHistoryImport(plan, mode)
                     }
                 )
             }
+
+            // After signing in here, the import offer appears on this screen
+            HistoryImportOffer(appViewModel)
 
             if (confirmRemoveImported.value) {
                 AlertDialog(

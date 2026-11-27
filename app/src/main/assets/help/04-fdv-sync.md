@@ -13,8 +13,8 @@ After you've filed a flight on FDV, the app can copy its actual figures onto you
 Block time, air time, fuel used, landing rate and passengers are filled in from FDV, and the flight is linked to its PIREP.
 
 ## Importing your FDV history
-<!-- keywords: import history, import fdv history, all flights, only my flights, pireps, past flights -->
-In **Settings**, under Logbook sync, tap **Import FDV history**. The app reads all your PIREPs and shows what it found:
+<!-- keywords: import history, import fdv history, all flights, only my flights, pireps, past flights, sign in -->
+When you first sign in to FDV, the app offers to do this for you. You can also start it any time: in **Settings**, under Logbook sync, tap **Import FDV history**. The app reads all your PIREPs and shows what it found:
 
 - PIREPs that match flights already in your logbook get their actuals
 - PIREPs that are already synced are skipped
