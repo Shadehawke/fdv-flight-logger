@@ -91,6 +91,7 @@ import androidx.compose.ui.unit.sp
 import com.fdv.fdvflightlogger.ui.components.LandingCard
 import com.fdv.fdvflightlogger.ui.components.rememberStartUpdate
 import com.fdv.fdvflightlogger.ui.components.HistoryImportOffer
+import com.fdv.fdvflightlogger.ui.components.WhatsNewDialog
 
 private val DashboardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -118,6 +119,10 @@ fun FlightLandingScreen(
     HistoryImportOffer(appViewModel)
     var showReleaseNotes by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // Once per launch: this version's release notes, if the app was just updated
+    LaunchedEffect(Unit) { appViewModel.checkWhatsNew() }
+    WhatsNewDialog(appViewModel)
 
     // Runs each time the dashboard opens; the ViewModel decides whether a day has passed
     LaunchedEffect(Unit) { appViewModel.checkForUpdate(manual = false) }

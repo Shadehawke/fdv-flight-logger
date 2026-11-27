@@ -33,6 +33,8 @@ class UserPrefsRepository(private val context: Context) {
 
         val LAST_UPDATE_CHECK = longPreferencesKey("last_update_check")
         val DISMISSED_UPDATE = stringPreferencesKey("dismissed_update")
+
+        val LAST_SEEN_VERSION = stringPreferencesKey("last_seen_version")
     }
 
     val pilotProfileFlow: Flow<PilotProfile> =
@@ -96,6 +98,14 @@ class UserPrefsRepository(private val context: Context) {
 
     suspend fun dismissUpdate(version: String) {
         context.dataStore.edit { it[Keys.DISMISSED_UPDATE] = version }
+    }
+
+    // The version whose "What's new" the pilot has seen (or that was freshly installed)
+    suspend fun lastSeenVersion(): String? =
+        context.dataStore.data.first()[Keys.LAST_SEEN_VERSION]
+
+    suspend fun setLastSeenVersion(version: String) {
+        context.dataStore.edit { it[Keys.LAST_SEEN_VERSION] = version }
     }
 
     suspend fun savePilotProfile(profile: PilotProfile) {

@@ -86,6 +86,8 @@ import com.fdv.fdvflightlogger.data.fdv.GateAssignment
 import com.fdv.fdvflightlogger.data.sync.PirepStatusSync
 import com.fdv.fdvflightlogger.data.fdv.FdvFleetType
 import com.fdv.fdvflightlogger.data.fdv.FdvBonus
+import android.content.pm.PackageInfo
+import com.fdv.fdvflightlogger.data.whatsnew.WhatsNew
 
 data class AppState(
     val profile: PilotProfile = PilotProfile(),
@@ -189,6 +191,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // The history import offered after signing in; null when there's nothing to show
     private val _importOffer = MutableStateFlow<ImportOffer?>(null)
     val importOffer: StateFlow<ImportOffer?> = _importOffer.asStateFlow()
+
+    // This version's release notes, shown once after an update; null hides the dialog
+    private val _whatsNew = MutableStateFlow<WhatsNew?>(null)
+    val whatsNew: StateFlow<WhatsNew?> = _whatsNew.asStateFlow()
+    private var whatsNewChecked = false
 
     // Non-null while the background air-time fill is queued or running; shown on the account card
     val airTimeFill: StateFlow<String?> = WorkManager.getInstance(getApplication())
@@ -812,6 +819,36 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _importOffer.value = null
     }
 
+    /** Called by the dashboard; runs once per app launch. Shows this version's notes after an update. */
+    fun checkWhatsNew() {
+        if (whatsNewChecked) return
+        whatsNewChecked = true
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val info = packageInfo(app) ?: return@launch
+            val current = info.versionName ?: return@launch
+            val lastSeen = repo.lastSeenVersion()
+            if (lastSeen == current) return@launch
+
+            // Equal on a fresh install; later once the app has been installed over an older version
+            val updatedInPlace = info.lastUpdateTime > info.firstInstallTime
+            val notes = WhatsNew.load(app)
+
+            if (WhatsNew.shouldShow(notes, current, lastSeen, updatedInPlace)) {
+                _whatsNew.value = notes
+            } else {
+                // A fresh install, or no notes for this version: nothing to show, now or later
+                repo.setLastSeenVersion(current)
+            }
+        }
+    }
+
+    fun dismissWhatsNew() {
+        val notes = _whatsNew.value ?: return
+        _whatsNew.value = null
+        viewModelScope.launch { repo.setLastSeenVersion(notes.version) }
+    }
+
     fun syncNewPireps() {
         if (_historyProgress.value != null) return
         // Both would import the same new PIREPs and add them twice
@@ -1115,18 +1152,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun appVersion(context: Context): String =
+    private fun packageInfo(context: Context): PackageInfo? =
         runCatching {
             val pm = context.packageManager
             // The Int-flags overload is deprecated from API 33; minSdk is 31, so branch
-            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 pm.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
             } else {
                 @Suppress("DEPRECATION")
                 pm.getPackageInfo(context.packageName, 0)
             }
-            info.versionName
-        }.getOrNull() ?: "unknown"
+        }.getOrNull()
+
+    private fun appVersion(context: Context): String = packageInfo(context)?.versionName ?: "unknown"
 
     suspend fun getFlightById(id: Long): FlightLogEntity? {
         return flightRepo.getById(id)
