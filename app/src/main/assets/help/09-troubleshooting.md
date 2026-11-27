@@ -44,6 +44,8 @@ For a problem, say what you were doing, what happened, and what you expected. If
 <!-- keywords: air time empty, missing, not filled -->
 Air times are filled in in the background after an import. In **Settings**, tap **Fill in missing air times** to start it again.
 
+If some flights stay empty after it finishes, their PIREPs have no takeoff or touchdown in the Black Box log, so FDV has no air time to give. Enter those by hand; the app won't overwrite them.
+
 ## Privacy and what the app sends
 <!-- keywords: privacy, data, security, tracking, analytics, what is sent -->
 The app has no analytics, ads or tracking, and no server of its own. It only contacts:

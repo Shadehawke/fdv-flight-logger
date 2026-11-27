@@ -110,4 +110,6 @@ class FlightLogRepository(context: Context) {
     private fun FlightLogEntity.dedupeKey(): String = "$createdAtEpochMs|$dep|$arr"
 
     suspend fun flightsMissingAirTime(): List<FlightLogEntity> = dao.flightsMissingAirTime()
+
+    suspend fun markAirTimeChecked(id: Long) = dao.markAirTimeChecked(id)
 }

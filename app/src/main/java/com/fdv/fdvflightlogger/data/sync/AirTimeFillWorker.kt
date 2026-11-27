@@ -50,11 +50,15 @@ class AirTimeFillWorker(context: Context, params: WorkerParameters) : CoroutineW
                 null
             }
 
-            pirep?.airMinutes?.let { minutes ->
+            if (pirep != null) {
                 // Re-read just before writing, so an edit the pilot made meanwhile is never overwritten
                 val current = flights.getById(flight.id)
-                if (current != null && current.airTime.isNullOrBlank()) {
-                    flights.upsert(current.copy(airTime = hhmm(minutes)))
+                val minutes = pirep.airMinutes
+                if (current != null && minutes != null && current.airTime.isNullOrBlank()) {
+                    flights.upsert(current.copy(airTime = hhmm(minutes), airTimeChecked = true))
+                } else {
+                    // FDV answered but its log has no takeoff or touchdown: asking again won't change that
+                    flights.markAirTimeChecked(flight.id)
                 }
             }
             delay(SPACING_MS)

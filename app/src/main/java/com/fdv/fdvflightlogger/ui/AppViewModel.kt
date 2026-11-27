@@ -783,6 +783,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun syncNewPireps() {
         if (_historyProgress.value != null) return
+        // Both would import the same new PIREPs and add them twice
+        if (statusCheckRunning) {
+            _events.tryEmit(UiEvent.Message("Already checking FDV. Try again in a moment."))
+            return
+        }
         viewModelScope.launch {
             val sync = fdvSync.value
             val mode = sync.mode ?: run {
@@ -817,8 +822,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Dashboard's silent check: at most every 30 minutes, never during an import, never shows errors. */
-    fun refreshPirepStatusesQuietly() {
+    /**
+     * Dashboard's silent sync: brings in PIREPs filed since the last sync, then updates review
+     * statuses. At most every 30 minutes, never during an import or sync, never shows errors.
+     */
+    fun syncFdvQuietly() {
         if (statusCheckRunning || _historyProgress.value != null) return
         if (System.currentTimeMillis() - statusCheckedAt < STATUS_CHECK_INTERVAL_MS) return
         viewModelScope.launch {
@@ -827,7 +835,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 val session = sessionStore.session.first()
                     ?.takeUnless { it.isExpired(System.currentTimeMillis()) }
                     ?: return@launch
+
+                // Read DataStore directly: right after launch, fdvSync can still hold its empty default
+                val sync = repo.fdvSyncFlow.first()
+
+                // Only after a history import; mode is null until the pilot has done one
+                val counts = sync.mode?.let { mode ->
+                    val pireps = fetchAllPireps(session.token, afterId = sync.lastPirepId, showProgress = false)
+                    if (pireps.isEmpty()) null else {
+                        val plan = withContext(Dispatchers.Default) { HistoryImport.plan(flightRepo.getAll(), pireps) }
+                        writeImport(plan, mode)
+                    }
+                }
+
+                // After the import, so flights just linked aren't fetched twice
                 refreshPirepStatuses(session.token, showProgress = false)
+                statusCheckedAt = System.currentTimeMillis()
+
+                counts?.let { (updated, added) ->
+                    val parts = buildList {
+                        if (added > 0) add("$added new flight${if (added == 1) "" else "s"}")
+                        if (updated > 0) add("$updated filled in")
+                    }
+                    if (parts.isNotEmpty()) _events.tryEmit(UiEvent.Message("From FDV: ${parts.joinToString(", ")}"))
+                }
             } catch (e: FdvApiException) {
                 // Silent by design: the next dashboard visit tries again
             } finally {
@@ -1000,12 +1031,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return updates.size to inserts.size
     }
 
-    private suspend fun fetchAllPireps(token: String, afterId: Long?): List<FdvPirep> {
+    private suspend fun fetchAllPireps(token: String, afterId: Long?, showProgress: Boolean = true): List<FdvPirep> {
         val all = mutableListOf<FdvPirep>()
         for (pageNumber in 1..MAX_HISTORY_PAGES) {
-            val page = withRateLimitRetry { FdvApi.pireps(token, pageNumber, afterId) }
+            // A quiet sync neither waits out rate limits nor shows progress; the next dashboard visit tries again
+            val page = if (showProgress) {
+                withRateLimitRetry { FdvApi.pireps(token, pageNumber, afterId) }
+            } else {
+                FdvApi.pireps(token, pageNumber, afterId)
+            }
             all += page.pireps
-            _historyProgress.value = "Reading your FDV logbook… page $pageNumber of ${page.lastPage}"
+            if (showProgress) _historyProgress.value = "Reading your FDV logbook… page $pageNumber of ${page.lastPage}"
             if (!page.hasMore) break
         }
         return all

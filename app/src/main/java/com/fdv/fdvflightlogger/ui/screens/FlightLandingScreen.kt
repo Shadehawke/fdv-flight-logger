@@ -110,7 +110,7 @@ fun FlightLandingScreen(
     LaunchedEffect(fdvPilot != null) {
         if (fdvPilot != null) {
             appViewModel.loadEvents()
-            appViewModel.refreshPirepStatusesQuietly()
+            appViewModel.syncFdvQuietly()
         }
     }
     var showReleaseNotes by remember { mutableStateOf(false) }

@@ -58,5 +58,7 @@ data class FlightLogEntity(
     val fdvCharterId: Long? = null,
     val importedFromFdv: Boolean = false,  // true only for flights the history import created
     // ---- FDV review (database version 7) ----
-    val fdvStatus: String? = null         // approved | pending | rejected; null = not filed, or not checked yet
+    val fdvStatus: String? = null,        // approved | pending | rejected; null = not filed, or not checked yet
+    // ---- Air time fill (database version 8) ----
+    val airTimeChecked: Boolean = false   // FDV was asked and its log had no air time; don't ask again
 )

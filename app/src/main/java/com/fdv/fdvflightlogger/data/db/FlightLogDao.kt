@@ -44,9 +44,12 @@ interface FlightLogDao {
     @Query("DELETE FROM flight_logs WHERE importedFromFdv = 1")
     suspend fun deleteImported(): Int
 
-    // Linked to a PIREP but no air time yet: the history import's flights, mostly
-    @Query("SELECT * FROM flight_logs WHERE fdvPirepId IS NOT NULL AND (airTime IS NULL OR airTime = '') ORDER BY createdAtEpochMs DESC")
+    // Linked to a PIREP, no air time yet, and FDV not already asked: the history import's flights, mostly
+    @Query("SELECT * FROM flight_logs WHERE fdvPirepId IS NOT NULL AND (airTime IS NULL OR airTime = '') AND airTimeChecked = 0 ORDER BY createdAtEpochMs DESC")
     suspend fun flightsMissingAirTime(): List<FlightLogEntity>
+
+    @Query("UPDATE flight_logs SET airTimeChecked = 1 WHERE id = :id")
+    suspend fun markAirTimeChecked(id: Long)
 
     @Query("UPDATE flight_logs SET fdvStatus = :status WHERE id = :id")
     suspend fun setFdvStatus(id: Long, status: String)
